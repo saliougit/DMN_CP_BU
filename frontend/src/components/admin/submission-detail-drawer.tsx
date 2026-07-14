@@ -19,7 +19,7 @@ const PdfViewer = dynamic(
   () => import("@/components/documents/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
   { ssr: false }
 )
-import { MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { MOCK_FACULTES, getNiveauxForFiliere } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 import type { Document } from "@/types"
 
@@ -44,7 +44,7 @@ const TREE_DATA: TreeNode[] = MOCK_FACULTES.map((f) => ({
   id: f.id, label: f.nom, type: "faculte" as const,
   children: f.filieres.map((fi) => ({
     id: fi.id, label: fi.nom, type: "filiere" as const,
-    children: MOCK_NIVEAUX.map((n) => ({
+    children: getNiveauxForFiliere(fi.nom, f.code).map((n) => ({
       id: `${fi.id}-${n.id}`, label: n.nom, type: "niveau" as const,
     })),
   })),

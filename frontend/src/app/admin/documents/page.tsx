@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MOCK_DOCUMENTS, MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { MOCK_DOCUMENTS, MOCK_FACULTES, getNiveauxForFiliere } from "@/lib/mock-data"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
@@ -158,8 +158,8 @@ export default function AdminDocumentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Documents approuvés</h1>
-          <p className="text-sm text-muted-foreground">{docs.length} documents dans le catalogue</p>
+          <h1 className="text-2xl font-bold tracking-tight">Documents du catalogue</h1>
+          <p className="text-sm text-muted-foreground">{docs.length} documents publiés (uploads admin + soumissions approuvées)</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
@@ -276,7 +276,7 @@ export default function AdminDocumentsPage() {
                     onChange={(e) => { if (e.target.files && e.target.files.length > 0) addFiles(e.target.files) }} />
                 </div>
 
-                {files.map((entry, index) => {
+                {files.map((entry) => {
                   const fac = filieres(entry.faculte)
                   return (
                     <div key={entry.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
@@ -339,9 +339,12 @@ export default function AdminDocumentsPage() {
                           <Label className="text-[10px]">Niveau</Label>
                           <select value={entry.niveau}
                             onChange={(e) => updateFile(entry.id, "niveau", e.target.value)}
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                            disabled={!entry.filiere}
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
-                            {MOCK_NIVEAUX.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
+                            {getNiveauxForFiliere(entry.filiere, MOCK_FACULTES.find((f) => f.nom === entry.faculte)?.code).map((n) => (
+                              <option key={n.id} value={n.nom}>{n.nom}</option>
+                            ))}
                           </select>
                         </div>
                         <div className="space-y-1">

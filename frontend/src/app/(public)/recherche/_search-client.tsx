@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   Search, SlidersHorizontal, FileText, BookOpen,
-  GraduationCap, Loader2, X, Filter, Download,
+  GraduationCap, Loader2, X, Download,
   User, Calendar, Tag, ExternalLink, RefreshCw
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { searchDocuments, MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { searchDocuments, MOCK_FACULTES, MOCK_NIVEAUX, MOCK_DOCUMENTS } from "@/lib/mock-data"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
 import type { Document } from "@/types"
@@ -29,14 +29,16 @@ const THEME_GROUPEMENTS = [
   { label: "Sciences & Technologies", mots: ["informatique", "mathématiques", "algorithme", "machine learning", "modélisation"] },
 ]
 
-function groupThemeMatches(query: string): { label: string; score: number }[] {
+// Années uniques des documents approuvés, ordre décroissant
+const ANNEES_DISPONIBLES = [...new Set(
+  MOCK_DOCUMENTS.filter((d) => d.statut === "approuve").map((d) => d.annee)
+)].sort((a, b) => b - a)
+
+function groupThemeMatches(query: string) {
   if (!query.trim()) return []
   const q = query.toLowerCase()
   return THEME_GROUPEMENTS
-    .map((g) => {
-      const score = g.mots.filter((m) => m.includes(q) || q.includes(m)).length
-      return { label: g.label, score }
-    })
+    .map((g) => ({ ...g, score: g.mots.filter((m) => m.includes(q) || q.includes(m)).length }))
     .filter((g) => g.score > 0)
     .sort((a, b) => b.score - a.score)
 }
@@ -103,13 +105,11 @@ function DocumentPreview({ doc }: { doc: Document | null }) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto">
         <div className="p-5 space-y-5">
-          {/* En-tête */}
           <div>
             <Badge className="mb-2 bg-primary/10 text-primary border-0 text-xs">{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
             <h3 className="text-base font-bold leading-snug">{doc.titre}</h3>
           </div>
 
-          {/* Métadonnées */}
           <div className="grid grid-cols-2 gap-3">
             <MetaItem icon={User} label="Auteur" value={doc.auteur} />
             <MetaItem icon={Calendar} label="Année" value={String(doc.annee)} />
@@ -141,7 +141,6 @@ function DocumentPreview({ doc }: { doc: Document | null }) {
           )}
         </div>
       </div>
-      {/* Actions toujours visibles en bas */}
       <div className="flex-shrink-0 border-t border-border/60 p-4">
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2 flex-1 text-xs h-9">
@@ -196,6 +195,7 @@ export function SearchClient() {
   const [filtreFaculte, setFiltreFaculte] = useState(searchParams.get("faculte") ?? "")
   const [filtreNiveau, setFiltreNiveau] = useState(searchParams.get("niveau") ?? "")
   const [filtreFiliere, setFiltreFiliere] = useState(searchParams.get("filiere") ?? "")
+  const [filtreAnnee, setFiltreAnnee] = useState(searchParams.get("annee") ?? "")
   const [results, setResults] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
@@ -206,7 +206,9 @@ export function SearchClient() {
 
   const { paginated, PaginationBar } = usePagination(results, 8)
 
-  const runSearch = useCallback((q: string, type: string, faculte: string, niveau: string, filiere: string) => {
+  const runSearch = useCallback((
+    q: string, type: string, faculte: string, niveau: string, filiere: string, annee: string
+  ) => {
     setLoading(true)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -215,6 +217,7 @@ export function SearchClient() {
         faculte: faculte || undefined,
         niveau: niveau || undefined,
         filiere: filiere || undefined,
+        annee: annee ? Number(annee) : undefined,
       })
       setResults(res)
       setLoading(false)
@@ -224,31 +227,33 @@ export function SearchClient() {
       if (faculte) params.set("faculte", faculte)
       if (niveau) params.set("niveau", niveau)
       if (filiere) params.set("filiere", filiere)
+      if (annee) params.set("annee", annee)
       router.replace(`/recherche?${params.toString()}`, { scroll: false })
     }, 300)
   }, [router])
 
   useEffect(() => {
-    runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere)
+    runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, filtreAnnee)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, runSearch])
+  }, [query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, filtreAnnee, runSearch])
 
   function resetFiltres() {
     setFiltreType("")
     setFiltreFaculte("")
     setFiltreNiveau("")
     setFiltreFiliere("")
+    setFiltreAnnee("")
   }
 
   const allFilieres = useMemo(() =>
     MOCK_FACULTES.flatMap((f) => f.filieres.map((fi) => ({ ...fi, faculteNom: f.nom }))),
   [])
 
-  const hasFiltres = !!(filtreType || filtreFaculte || filtreNiveau || filtreFiliere)
+  const hasFiltres = !!(filtreType || filtreFaculte || filtreNiveau || filtreFiliere || filtreAnnee)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      {/* Barre recherche + themes */}
+      {/* Barre recherche + thèmes suggérés */}
       <div className="mb-6 space-y-2">
         <div className="relative max-w-xl">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -270,8 +275,12 @@ export function SearchClient() {
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-xs text-muted-foreground">Thèmes suggérés :</span>
             {themes.map((t) => (
-              <Badge key={t.label} variant="secondary" className="gap-1 text-xs cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors"
-                onClick={() => {}}>
+              <Badge
+                key={t.label}
+                variant="secondary"
+                className="gap-1 text-xs cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors"
+                onClick={() => setQuery(t.mots[0])}
+              >
                 {t.label}
               </Badge>
             ))}
@@ -281,9 +290,9 @@ export function SearchClient() {
 
       {/* 3 colonnes */}
       <div className="flex gap-6" style={{ height: "calc(100vh - 12rem)" }}>
-        {/* Colonne 1 : Filtres (fixe) */}
+        {/* Colonne 1 : Filtres */}
         <aside className="w-56 flex-shrink-0">
-          <div className="sticky top-0 rounded-xl border border-border bg-card p-4 space-y-5">
+          <div className="sticky top-0 rounded-xl border border-border bg-card p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -293,13 +302,15 @@ export function SearchClient() {
             </div>
             <Separator />
 
+            {/* Type */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</p>
-              <Select value={filtreType} onValueChange={(v) => v && setFiltreType(v)}>
+              <Select value={filtreType || "__all__"} onValueChange={(v) => setFiltreType(v && v !== "__all__" ? v : "")}>
                 <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="Tous" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
                   {Object.entries(TYPE_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>
                   ))}
@@ -308,13 +319,21 @@ export function SearchClient() {
             </div>
             <Separator />
 
+            {/* Faculté */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Faculté</p>
-              <Select value={filtreFaculte} onValueChange={(v) => { if (v) { setFiltreFaculte(v); setFiltreFiliere("") } }}>
+              <Select
+                value={filtreFaculte || "__all__"}
+                onValueChange={(v) => {
+                  if (!v || v === "__all__") { setFiltreFaculte(""); setFiltreFiliere("") }
+                  else { setFiltreFaculte(v); setFiltreFiliere("") }
+                }}
+              >
                 <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="Toutes" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
                   {MOCK_FACULTES.map((f) => (
                     <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
                   ))}
@@ -322,13 +341,15 @@ export function SearchClient() {
               </Select>
             </div>
 
+            {/* Filière (cascade de la faculté) */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filière</p>
-              <Select value={filtreFiliere} onValueChange={(v) => v && setFiltreFiliere(v)}>
+              <Select value={filtreFiliere || "__all__"} onValueChange={(v) => setFiltreFiliere(v && v !== "__all__" ? v : "")}>
                 <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="Toutes" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
                   {(filtreFaculte
                     ? allFilieres.filter((f) => f.faculteNom === filtreFaculte)
                     : allFilieres
@@ -340,13 +361,15 @@ export function SearchClient() {
             </div>
             <Separator />
 
+            {/* Niveau */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Niveau</p>
-              <Select value={filtreNiveau} onValueChange={(v) => v && setFiltreNiveau(v)}>
+              <Select value={filtreNiveau || "__all__"} onValueChange={(v) => setFiltreNiveau(v && v !== "__all__" ? v : "")}>
                 <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue placeholder="Tous" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
                   {MOCK_NIVEAUX.map((n) => (
                     <SelectItem key={n.id} value={n.nom} className="text-xs">{n.nom}</SelectItem>
                   ))}
@@ -354,11 +377,21 @@ export function SearchClient() {
               </Select>
             </div>
 
-            {hasFiltres && (
-              <Button size="sm" variant="outline" onClick={resetFiltres} className="w-full gap-2">
-                <Filter className="h-3.5 w-3.5" /> Effacer
-              </Button>
-            )}
+            {/* Année */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</p>
+              <Select value={filtreAnnee || "__all__"} onValueChange={(v) => setFiltreAnnee(v && v !== "__all__" ? v : "")}>
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
+                  {ANNEES_DISPONIBLES.map((a) => (
+                    <SelectItem key={a} value={String(a)} className="text-xs">{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </aside>
 
@@ -379,8 +412,28 @@ export function SearchClient() {
                     {TYPE_LABELS[filtreType]} <X className="h-3 w-3" />
                   </Badge>
                 )}
+                {filtreFaculte && (
+                  <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => { setFiltreFaculte(""); setFiltreFiliere("") }}>
+                    {MOCK_FACULTES.find((f) => f.nom === filtreFaculte)?.code ?? filtreFaculte} <X className="h-3 w-3" />
+                  </Badge>
+                )}
+                {filtreFiliere && (
+                  <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => setFiltreFiliere("")}>
+                    {filtreFiliere} <X className="h-3 w-3" />
+                  </Badge>
+                )}
+                {filtreNiveau && (
+                  <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => setFiltreNiveau("")}>
+                    {filtreNiveau} <X className="h-3 w-3" />
+                  </Badge>
+                )}
+                {filtreAnnee && (
+                  <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => setFiltreAnnee("")}>
+                    {filtreAnnee} <X className="h-3 w-3" />
+                  </Badge>
+                )}
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ml-auto"
-                  onClick={() => { setRefreshing(true); runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere); setTimeout(() => setRefreshing(false), 600) }}
+                  onClick={() => { setRefreshing(true); runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, filtreAnnee); setTimeout(() => setRefreshing(false), 600) }}
                   title="Actualiser" disabled={refreshing}>
                   <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
                 </Button>
@@ -413,7 +466,7 @@ export function SearchClient() {
           </div>
         </div>
 
-        {/* Colonne 3 : Prévisualisation du document sélectionné */}
+        {/* Colonne 3 : Aperçu du document sélectionné */}
         <aside className="w-80 flex-shrink-0 hidden xl:block">
           <div className="sticky top-0 rounded-xl border border-border bg-card overflow-hidden" style={{ height: "calc(100vh - 12rem)" }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">

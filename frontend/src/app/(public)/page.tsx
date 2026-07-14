@@ -1,13 +1,15 @@
 import Image from "next/image"
 import Link from "next/link"
-import { BookOpen, FileText, GraduationCap, Users } from "lucide-react"
+import { BookOpen, FileText, GraduationCap, Users, ClipboardList, Archive, Lightbulb } from "lucide-react"
 import { SearchBar } from "@/components/search/search-bar"
 import { Badge } from "@/components/ui/badge"
+import { MOCK_DOCUMENTS, MOCK_FACULTES } from "@/lib/mock-data"
+
+const published = MOCK_DOCUMENTS.filter((d) => d.statut !== "en_attente")
 
 const STATS = [
-  { icon: FileText, label: "Documents", value: "1 200+" },
-  { icon: GraduationCap, label: "Thèses & Mémoires", value: "950+" },
-  { icon: BookOpen, label: "Facultés couvertes", value: "12" },
+  { icon: FileText, label: "Documents", value: String(published.length) },
+  { icon: BookOpen, label: "Facultés couvertes", value: String(MOCK_FACULTES.length) },
   { icon: Users, label: "Membres actifs", value: "300+" },
 ]
 
@@ -88,6 +90,58 @@ export default function HomePage() {
               <span className="text-xs text-muted-foreground">{label}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Présentation de la Commission Pédagogique */}
+      <section className="mx-auto max-w-4xl px-4 py-14">
+        <div className="mb-8 text-center">
+          <span className="inline-block mb-3 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary uppercase tracking-widest">
+            Commission Pédagogique
+          </span>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            Daara Madjmahoun Noreyni · UCAD
+          </h2>
+          <p className="mt-4 mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Instance de réflexion et de gouvernance chargée de superviser, d&apos;évaluer et d&apos;améliorer
+            la qualité de l&apos;enseignement à travers la documentation, la recherche et des rencontres
+            scientifiques.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <ClipboardList className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Analyse des besoins</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Identifier et évaluer les besoins de formation des membres afin d&apos;orienter les programmes
+              pédagogiques du Daara.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <Archive className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Archivage des productions</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Collecter et préserver les productions intellectuelles des membres — mémoires, thèses et
+              articles — au sein de cette bibliothèque numérique.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <Lightbulb className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Méthodes innovantes</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Promouvoir des approches pédagogiques novatrices et organiser des rencontres scientifiques
+              pour enrichir la pratique académique au sein du Daara.
+            </p>
+          </div>
         </div>
       </section>
 

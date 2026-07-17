@@ -1,9 +1,10 @@
-﻿"use client"
-import { createContext, useContext, useState, type ReactNode } from "react"
+"use client"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { User, UserRole } from "@/types"
-import { MOCK_USERS, MOCK_PASSWORDS } from "@/lib/mock-users"
+import { api, tokens } from "@/lib/api"
 
 interface AuthResult { success: boolean; role?: UserRole; error?: string }
+
 interface AuthCtx {
   user: User | null
   isLoading: boolean
@@ -11,53 +12,82 @@ interface AuthCtx {
   isAdmin: boolean
   login: (email: string, password: string) => Promise<AuthResult>
   register: (form: Record<string, string>) => Promise<AuthResult>
-  logout: () => void
+  logout: () => Promise<void>
 }
+
 const Ctx = createContext<AuthCtx | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [user, setUser]       = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Restaurer la session depuis le token stocké
+  useEffect(() => {
+    const restore = async () => {
+      if (tokens.getAccess()) {
+        try {
+          const me = await api.me()
+          setUser(me)
+        } catch {
+          tokens.clear()
+        }
+      }
+      setIsLoading(false)
+    }
+    restore()
+  }, [])
 
   async function login(email: string, password: string): Promise<AuthResult> {
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setIsLoading(false)
-
-    // Cherche dans les utilisateurs mock avec mot de passe enregistré
-    const knownUser = MOCK_USERS.find((u) => u.email === email)
-    if (knownUser) {
-      const expectedPassword = MOCK_PASSWORDS[email]
-      if (expectedPassword && password !== expectedPassword) {
-        return { success: false, error: "Mot de passe incorrect" }
-      }
-      setUser(knownUser)
-      return { success: true, role: knownUser.role }
+    try {
+      const { user: me } = await api.login(email, password)
+      setUser(me)
+      return { success: true, role: me.role }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Identifiants incorrects" }
+    } finally {
+      setIsLoading(false)
     }
-
-    // Compte visiteur anonyme : n'importe quel email + mdp ≥ 4 caractères
-    if (email && password.length >= 4) {
-      const u: User = { id: "u_new", nom: "Utilisateur", prenom: "Membre", email, role: "membre", createdAt: new Date().toISOString() }
-      setUser(u); return { success: true, role: "membre" }
-    }
-
-    return { success: false, error: "Identifiants incorrects" }
   }
 
   async function register(form: Record<string, string>): Promise<AuthResult> {
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setIsLoading(false)
-    const u: User = { id: `u_${Date.now()}`, nom: form.nom, prenom: form.prenom, email: form.email, role: "membre", niveau: form.niveau, faculte: form.faculte, filiere: form.filiere, createdAt: new Date().toISOString() }
-    setUser(u); return { success: true, role: "membre" }
+    try {
+      await api.register({
+        username:   form.email,
+        email:      form.email,
+        first_name: form.prenom,
+        last_name:  form.nom,
+        password:   form.password,
+        telephone:  form.telephone,
+      })
+      // Connexion automatique après inscription
+      return login(form.email, form.password)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Erreur lors de l'inscription" }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  function logout() { setUser(null) }
+  async function logout() {
+    await api.logout()  // blackliste le refresh token côté serveur
+    setUser(null)
+  }
 
-  const isAuthenticated = user !== null
-  const isAdmin = user?.role === "admin"
-
-  return <Ctx.Provider value={{ user, isLoading, isAuthenticated, isAdmin, login, register, logout }}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={{
+      user,
+      isLoading,
+      isAuthenticated: user !== null,
+      isAdmin:         user?.role === "admin",
+      login,
+      register,
+      logout,
+    }}>
+      {children}
+    </Ctx.Provider>
+  )
 }
 
 export function useAuth() {

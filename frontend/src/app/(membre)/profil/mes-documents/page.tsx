@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -11,22 +11,28 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
-import { useState, useCallback } from "react"
+import type { Document } from "@/types"
 
 export default function MesDocumentsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [recherche, setRecherche] = useState("")
   const [refreshing, setRefreshing] = useState(false)
-  const [, forceUpdate] = useState(0)
+  const [docs, setDocs] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const docs = useMemo(
-    () => MOCK_DOCUMENTS.filter((d) => d.soumisParId === user?.id),
-    [user]
-  )
+  const loadDocs = useCallback(() => {
+    setLoading(true)
+    api.getMesDocuments()
+      .then(setDocs)
+      .catch(() => setDocs([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { loadDocs() }, [loadDocs])
 
   const filtrees = useMemo(
     () => docs.filter((d) =>
@@ -51,7 +57,7 @@ export default function MesDocumentsPage() {
           <p className="text-sm text-muted-foreground">{docs.length} document{docs.length > 1 ? "s" : ""} soumis</p>
         </div>
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
-          onClick={() => { setRefreshing(true); forceUpdate((n) => n + 1); setTimeout(() => setRefreshing(false), 600) }}
+          onClick={() => { setRefreshing(true); loadDocs(); setTimeout(() => setRefreshing(false), 800) }}
           disabled={refreshing}>
           <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Actualiser
         </Button>

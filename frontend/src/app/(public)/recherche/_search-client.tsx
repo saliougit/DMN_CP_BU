@@ -15,10 +15,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { searchDocuments, MOCK_FACULTES, MOCK_NIVEAUX, MOCK_DOCUMENTS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
-import type { Document } from "@/types"
+import type { Document, Faculte, Niveau } from "@/types"
 
 const THEME_GROUPEMENTS = [
   { label: "Finance & Économie islamique", mots: ["finance islamique", "banque islamique", "mourabaha", "moucharaka", "waqf", "zakât"] },
@@ -29,10 +29,8 @@ const THEME_GROUPEMENTS = [
   { label: "Sciences & Technologies", mots: ["informatique", "mathématiques", "algorithme", "machine learning", "modélisation"] },
 ]
 
-// Années uniques des documents approuvés, ordre décroissant
-const ANNEES_DISPONIBLES = [...new Set(
-  MOCK_DOCUMENTS.filter((d) => d.statut === "approuve").map((d) => d.annee)
-)].sort((a, b) => b - a)
+// Années fixes disponibles pour le filtre
+const ANNEES_FIXES = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i)
 
 function groupThemeMatches(query: string) {
   if (!query.trim()) return []
@@ -200,7 +198,14 @@ export function SearchClient() {
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
+  }, [])
 
   const themes = useMemo(() => groupThemeMatches(query), [query])
 
@@ -211,16 +216,22 @@ export function SearchClient() {
   ) => {
     setLoading(true)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      const res = searchDocuments(q, {
-        type: type || undefined,
-        faculte: faculte || undefined,
-        niveau: niveau || undefined,
-        filiere: filiere || undefined,
-        annee: annee ? Number(annee) : undefined,
-      })
-      setResults(res)
-      setLoading(false)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.searchDocuments({
+          q: q || undefined,
+          type: type as any || undefined,
+          faculte: faculte || undefined,
+          niveau: niveau || undefined,
+          filiere: filiere || undefined,
+          annee: annee ? Number(annee) : undefined,
+        })
+        setResults(res.documents)
+      } catch {
+        setResults([])
+      } finally {
+        setLoading(false)
+      }
       const params = new URLSearchParams()
       if (q) params.set("q", q)
       if (type) params.set("type", type)
@@ -246,8 +257,8 @@ export function SearchClient() {
   }
 
   const allFilieres = useMemo(() =>
-    MOCK_FACULTES.flatMap((f) => f.filieres.map((fi) => ({ ...fi, faculteNom: f.nom }))),
-  [])
+    facultes.flatMap((f) => f.filieres.map((fi) => ({ ...fi, faculteNom: f.nom }))),
+  [facultes])
 
   const hasFiltres = !!(filtreType || filtreFaculte || filtreNiveau || filtreFiliere || filtreAnnee)
 
@@ -334,7 +345,7 @@ export function SearchClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
-                  {MOCK_FACULTES.map((f) => (
+                  {facultes.map((f) => (
                     <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
                   ))}
                 </SelectContent>
@@ -370,7 +381,7 @@ export function SearchClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
-                  {MOCK_NIVEAUX.map((n) => (
+                  {niveaux.map((n) => (
                     <SelectItem key={n.id} value={n.nom} className="text-xs">{n.nom}</SelectItem>
                   ))}
                 </SelectContent>
@@ -386,7 +397,7 @@ export function SearchClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
-                  {ANNEES_DISPONIBLES.map((a) => (
+                  {ANNEES_FIXES.map((a) => (
                     <SelectItem key={a} value={String(a)} className="text-xs">{a}</SelectItem>
                   ))}
                 </SelectContent>
@@ -414,7 +425,7 @@ export function SearchClient() {
                 )}
                 {filtreFaculte && (
                   <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => { setFiltreFaculte(""); setFiltreFiliere("") }}>
-                    {MOCK_FACULTES.find((f) => f.nom === filtreFaculte)?.code ?? filtreFaculte} <X className="h-3 w-3" />
+                    {facultes.find((f) => f.nom === filtreFaculte)?.code ?? filtreFaculte} <X className="h-3 w-3" />
                   </Badge>
                 )}
                 {filtreFiliere && (
@@ -433,7 +444,7 @@ export function SearchClient() {
                   </Badge>
                 )}
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ml-auto"
-                  onClick={() => { setRefreshing(true); runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, filtreAnnee); setTimeout(() => setRefreshing(false), 600) }}
+                  onClick={() => { setRefreshing(true); runSearch(query, filtreType, filtreFaculte, filtreNiveau, filtreFiliere, filtreAnnee); setTimeout(() => setRefreshing(false), 800) }}
                   title="Actualiser" disabled={refreshing}>
                   <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
                 </Button>

@@ -102,7 +102,7 @@ export default function AdminDocumentDetailPage() {
         <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-lg font-semibold">Document introuvable</h2>
         <p className="text-sm text-muted-foreground mt-1">Ce document n&apos;existe pas ou a été supprimé.</p>
-        <Link href="/admin/documents"><Button variant="outline" size="sm" className="mt-4 gap-2"><ArrowLeft className="h-4 w-4" /> Retour au catalogue</Button></Link>
+        <Link href="/gestion/documents"><Button variant="outline" size="sm" className="mt-4 gap-2"><ArrowLeft className="h-4 w-4" /> Retour au catalogue</Button></Link>
       </div>
     )
   }
@@ -119,7 +119,7 @@ export default function AdminDocumentDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/admin/documents" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+      <Link href="/gestion/documents" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Retour au catalogue
       </Link>

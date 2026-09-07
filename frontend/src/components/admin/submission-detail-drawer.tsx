@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   CheckCircle2, XCircle, Pencil, Save, X, ChevronRight,
   ChevronDown, FolderOpen, Folder, BookOpen, GraduationCap,
@@ -19,7 +19,8 @@ const PdfViewer = dynamic(
   () => import("@/components/documents/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
   { ssr: false }
 )
-import { MOCK_FACULTES, getNiveauxForFiliere } from "@/lib/mock-data"
+import { api } from "@/lib/api"
+import type { Faculte } from "@/types"
 import { cn } from "@/lib/utils"
 import type { Document } from "@/types"
 
@@ -40,15 +41,15 @@ interface TreeNode {
   children?: TreeNode[]
 }
 
-const TREE_DATA: TreeNode[] = MOCK_FACULTES.map((f) => ({
-  id: f.id, label: f.nom, type: "faculte" as const,
-  children: f.filieres.map((fi) => ({
-    id: fi.id, label: fi.nom, type: "filiere" as const,
-    children: getNiveauxForFiliere(fi.nom, f.code).map((n) => ({
-      id: `${fi.id}-${n.id}`, label: n.nom, type: "niveau" as const,
+function buildTreeData(facultes: Faculte[]): TreeNode[] {
+  return facultes.map((f) => ({
+    id: f.id, label: f.nom, type: "faculte" as const,
+    children: f.filieres.map((fi) => ({
+      id: fi.id, label: fi.nom, type: "filiere" as const,
+      children: [] as TreeNode[],
     })),
-  })),
-}))
+  }))
+}
 
 export interface PickedNode { faculte: string; filiere: string; niveau: string }
 
@@ -88,18 +89,6 @@ function TreePickerNode({
         style={{ paddingLeft: `${0.5 + depth * 1.1}rem` }}
         onClick={() => {
           if (node.type === "niveau") {
-            // Remonter le chemin complet
-            // On se fie au label — en prod on ferait avec les IDs
-            const parts = node.id.split("-")
-            // Chercher faculte et filiere depuis l'arbre
-            for (const f of MOCK_FACULTES) {
-              for (const fi of f.filieres) {
-                if (fi.id === parts[0]) {
-                  onSelect({ faculte: f.nom, filiere: fi.nom, niveau: node.label })
-                  return
-                }
-              }
-            }
             onSelect({ faculte: "", filiere: "", niveau: node.label })
           } else {
             setOpen(!open)
@@ -132,14 +121,15 @@ function TreePickerNode({
 }
 
 function TreePicker({
-  value, onChange,
+  value, onChange, treeData,
 }: {
   value: PickedNode | null
   onChange: (v: PickedNode) => void
+  treeData: TreeNode[]
 }) {
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-2 max-h-72 overflow-y-auto space-y-0.5">
-      {TREE_DATA.map((node) => (
+      {treeData.map((node) => (
         <TreePickerNode key={node.id} node={node} depth={0} selected={value} onSelect={onChange} />
       ))}
     </div>
@@ -166,6 +156,11 @@ export function SubmissionDetailDrawer({
   const [editMode, setEditMode] = useState(false)
   const [classifMode, setClassifMode] = useState<"confirmer" | "choisir">("confirmer")
   const [pdfPage, setPdfPage] = useState(1)
+  const [treeData, setTreeData] = useState<TreeNode[]>([])
+
+  useEffect(() => {
+    api.getFacultes().then((facs) => setTreeData(buildTreeData(facs))).catch(() => {})
+  }, [])
 
   // Formulaire édition
   const [draft, setDraft] = useState<Partial<Document>>({})
@@ -367,7 +362,7 @@ export function SubmissionDetailDrawer({
                 {classifMode === "choisir" && (
                   <div className="space-y-2">
                     <p className="text-[11px] text-muted-foreground">Sélectionnez le niveau cible :</p>
-                    <TreePicker value={classif} onChange={setClassif} />
+                    <TreePicker value={classif} onChange={setClassif} treeData={treeData} />
                     {classif && (
                       <div className="rounded-lg bg-primary/8 border border-primary/20 px-3 py-2 text-xs">
                         <p className="font-medium text-primary mb-1">Emplacement sélectionné :</p>

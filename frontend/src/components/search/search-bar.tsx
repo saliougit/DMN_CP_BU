@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Search, X, Loader2, FileText, BookOpen, GraduationCap, TrendingUp } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { searchDocuments } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { TYPE_LABELS } from "@/lib/document-types"
 import type { Document } from "@/types"
 
@@ -53,12 +53,16 @@ export function SearchBar({ autoFocus = false, size = "default" }: SearchBarProp
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      const docs = searchDocuments(q, {}).slice(0, 5)
+    try {
+      const res = await api.searchDocuments({ q })
+      const docs = res.documents.slice(0, 5)
       setSuggestions(docs)
       setOpen(docs.length > 0 || themesSuggests.length > 0)
+    } catch {
+      setSuggestions([])
+    } finally {
       setLoading(false)
-    }, 200)
+    }
   }, [themesSuggests])
 
   useEffect(() => {

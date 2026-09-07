@@ -120,6 +120,46 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
+# ─── Redis / Cache ────────────────────────────────────────────────────────────
+
+REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+
+CACHES = {
+    "default": {
+        "BACKEND":  "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS":  {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "KEY_PREFIX": "dmn_bu",
+    }
+}
+
+# ─── Celery ───────────────────────────────────────────────────────────────────
+
+CELERY_BROKER_URL       = REDIS_URL
+CELERY_RESULT_BACKEND   = REDIS_URL
+CELERY_ACCEPT_CONTENT   = ["json"]
+CELERY_TASK_SERIALIZER  = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE         = "Africa/Dakar"
+CELERY_TASK_TRACK_STARTED = True
+
+# ─── Email ────────────────────────────────────────────────────────────────────
+
+_send_real_emails = config("SEND_REAL_EMAILS", default=False, cast=bool)
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if _send_real_emails
+    else "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST          = config("EMAIL_HOST",          default="smtp.gmail.com")
+EMAIL_PORT          = config("EMAIL_PORT",          default=587, cast=int)
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = config("EMAIL_HOST_USER",     default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL  = config("DEFAULT_FROM_EMAIL",  default="noreply@budmnucad.sn")
+
+# ─── JWT ──────────────────────────────────────────────────────────────────────
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME":    timedelta(hours=2),
     "REFRESH_TOKEN_LIFETIME":   timedelta(days=30),
@@ -139,8 +179,10 @@ MEILISEARCH_URL        = config("MEILI_URL",        default="http://search:7700"
 MEILISEARCH_MASTER_KEY = config("MEILI_MASTER_KEY", default="")
 
 # ─── MinIO ────────────────────────────────────────────────────────────────────
+# Les mêmes variables (MINIO_ROOT_USER / MINIO_ROOT_PASSWORD) servent aussi
+# au container MinIO dans docker-compose — une seule paire à gérer dans .env
 
-MINIO_ENDPOINT   = config("MINIO_ENDPOINT",   default="storage:9000")
-MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="minioadmin")
-MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="minioadmin")
-MINIO_BUCKET     = config("MINIO_BUCKET",     default="dmn-documents")
+MINIO_ENDPOINT   = config("MINIO_ENDPOINT",      default="localhost:9000")
+MINIO_ACCESS_KEY = config("MINIO_ROOT_USER",     default="minioadmin")
+MINIO_SECRET_KEY = config("MINIO_ROOT_PASSWORD", default="minioadmin")
+MINIO_BUCKET     = config("MINIO_BUCKET",        default="dmn-documents")

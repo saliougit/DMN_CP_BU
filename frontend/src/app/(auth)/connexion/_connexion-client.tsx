@@ -33,7 +33,7 @@ export function ConnexionClient() {
         description: result.role === "admin" ? "Bienvenue dans l'administration" : "Bienvenue sur DMN-BU",
       })
       if (result.role === "admin") {
-        router.push("/admin")
+        router.push("/gestion")
       } else {
         // Retour à la page d'origine si redirigé par le guard, sinon catalogue
         router.push(from && from.startsWith("/") && !from.startsWith("/connexion") ? from : "/")

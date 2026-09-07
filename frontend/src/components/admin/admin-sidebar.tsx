@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import {
   LayoutDashboard, ClipboardList, FolderTree,
   BookMarked, Users, LogOut
@@ -17,28 +18,33 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 
 const NAV_GESTION = [
-  { title: "Classification", href: "/admin/classification", icon: FolderTree },
-  { title: "Membres", href: "/admin/membres", icon: Users },
+  { title: "Classification", href: "/gestion/classification", icon: FolderTree },
+  { title: "Membres", href: "/gestion/membres", icon: Users },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+  const [pendingCount, setPendingCount] = useState(0)
 
-  const pendingCount = MOCK_DOCUMENTS.filter((d) => d.statut === "en_attente").length
+  useEffect(() => {
+    api.getDocumentsAdmin({ statut: "en_attente" })
+      .then((docs) => setPendingCount(docs.length))
+      .catch(() => {})
+  }, [])
 
   const NAV_MAIN: { title: string; href: string; icon: LucideIcon; badge?: number }[] = [
-    { title: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
-    { title: "Soumissions", href: "/admin/soumissions", icon: ClipboardList, badge: pendingCount },
-    { title: "Documents", href: "/admin/documents", icon: BookMarked },
+    { title: "Tableau de bord", href: "/gestion", icon: LayoutDashboard },
+    { title: "Soumissions", href: "/gestion/soumissions", icon: ClipboardList, badge: pendingCount },
+    { title: "Documents", href: "/gestion/documents", icon: BookMarked },
   ]
 
   function isActive(href: string) {
-    return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href)
+    return href === "/gestion" ? pathname === "/gestion" : pathname.startsWith(href)
   }
 
   function handleLogout() {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   CheckCircle2, XCircle, Eye, Clock, FileText, RefreshCw,
   User, GraduationCap, Calendar, AlertTriangle, Search,
@@ -17,8 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { SubmissionDetailDrawer } from "@/components/admin/submission-detail-drawer"
 import type { PickedNode } from "@/components/admin/submission-detail-drawer"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
-import { MOCK_USERS } from "@/lib/mock-users"
+import { api } from "@/lib/api"
 import type { Document } from "@/types"
 import { usePagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
@@ -65,15 +64,19 @@ const STATUS_STYLE: Record<string, { icon: React.ElementType; label: string; car
 }
 
 export default function SoumissionsPage() {
-  const [allDocs, setAllDocs] = useState<Document[]>(() =>
-    MOCK_DOCUMENTS.map((d) => ({ ...d }))
-  )
+  const [allDocs, setAllDocs] = useState<Document[]>([])
   const [tab, setTab] = useState<TabKey>("en_attente")
   const [recherche, setRecherche] = useState("")
   const [detailDoc, setDetailDoc] = useState<Document | null>(null)
   const [rejeteDoc, setRejeteDoc] = useState<Document | null>(null)
   const [motifRejet, setMotifRejet] = useState("")
   const [refreshing, setRefreshing] = useState(false)
+
+  function loadDocs() {
+    api.getDocumentsAdmin().then(setAllDocs).catch(() => {})
+  }
+
+  useEffect(() => { loadDocs() }, [])
 
   const filtrees = useMemo(() => {
     let items = allDocs
@@ -97,27 +100,29 @@ export default function SoumissionsPage() {
     rejete: allDocs.filter((d) => d.statut === "rejete").length,
   }), [allDocs])
 
-  function handleApprouver(doc: Document, classif: PickedNode) {
-    setAllDocs((prev) => prev.map((d) =>
-      d.id === doc.id
-        ? { ...d, statut: "approuve" as const, faculte: classif.faculte, filiere: classif.filiere, niveau: classif.niveau }
-        : d
-    ))
-    toast.success("Document approuvé", {
-      description: `"${doc.titre.slice(0, 50)}…" classé dans ${classif.faculte} > ${classif.filiere}.`,
-    })
+  async function handleApprouver(doc: Document, _classif: PickedNode) {
+    try {
+      await api.approuverDocument(doc.id)
+      toast.success("Document approuvé", {
+        description: `"${doc.titre.slice(0, 50)}…" publié dans le catalogue.`,
+      })
+      loadDocs()
+    } catch {
+      toast.error("Erreur lors de l'approbation")
+    }
   }
 
-  function handleRejeter() {
+  async function handleRejeter() {
     if (!rejeteDoc || !motifRejet.trim()) return
-    setAllDocs((prev) => prev.map((d) =>
-      d.id === rejeteDoc.id
-        ? { ...d, statut: "rejete" as const, motifRejet }
-        : d
-    ))
-    setRejeteDoc(null)
-    setMotifRejet("")
-    toast.error("Document rejeté", { description: `Motif : ${motifRejet.slice(0, 60)}…` })
+    try {
+      await api.rejeterDocument(rejeteDoc.id, motifRejet)
+      toast.error("Document rejeté", { description: `Motif : ${motifRejet.slice(0, 60)}…` })
+      setRejeteDoc(null)
+      setMotifRejet("")
+      loadDocs()
+    } catch {
+      toast.error("Erreur lors du rejet")
+    }
   }
 
   return (
@@ -126,12 +131,9 @@ export default function SoumissionsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Évaluation des soumissions</h1>
-          <p className="text-sm text-muted-foreground">
-            {counts.en_attente} en attente · {counts.approuve} approuvées · {counts.rejete} rejetées
-          </p>
         </div>
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
-          onClick={() => { setRefreshing(true); setAllDocs(MOCK_DOCUMENTS.map((d) => ({ ...d }))); setTimeout(() => setRefreshing(false), 600) }}
+          onClick={() => { setRefreshing(true); loadDocs(); setTimeout(() => setRefreshing(false), 800) }}
           disabled={refreshing}>
           <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Actualiser
         </Button>
@@ -284,9 +286,7 @@ function SubmissionCard({ doc, onPreview, onApprouver, onRejeter }: {
           )}
 
           {doc.statut === "approuve" && doc.approuveParId && (() => {
-            const admin = MOCK_USERS.find((u) => u.id === doc.approuveParId)
-            const nom = admin?.prenom && admin?.nom ? `${admin.prenom} ${admin.nom}` : doc.approuveParId
-            return <p className="mt-2 text-[10px] text-muted-foreground">Approuvé par {nom}</p>
+            return <p className="mt-2 text-[10px] text-muted-foreground">Approuvé par {doc.approuveParId}</p>
           })()}
 
           <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{doc.resume}</p>

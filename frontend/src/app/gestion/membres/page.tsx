@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import {
   Search, Users, Mail, GraduationCap, BookOpen, Calendar,
   RefreshCw, Plus, Loader2, Shield, UserRound
@@ -19,9 +19,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
 import { usePagination } from "@/components/ui/pagination"
-import { MOCK_USERS, createUser } from "@/lib/mock-users"
-import { MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
-import type { User } from "@/types"
+import { api } from "@/lib/api"
+import type { User, Faculte, Niveau } from "@/types"
 import { toast } from "sonner"
 
 function getInitials(nom: string, prenom: string): string {
@@ -60,7 +59,9 @@ function MemberCard({ user }: { user: User }) {
 }
 
 export default function AdminMembresPage() {
-  const [users, setUsers] = useState(MOCK_USERS)
+  const [users, setUsers] = useState<User[]>([])
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
   const [recherche, setRecherche] = useState("")
   const [refreshing, setRefreshing] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -69,6 +70,16 @@ export default function AdminMembresPage() {
     faculte: "", filiere: "", niveau: "",
   })
   const [saving, setSaving] = useState(false)
+
+  function loadMembers() {
+    api.getMembers().then(setUsers).catch(() => {})
+  }
+
+  useEffect(() => {
+    loadMembers()
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
+  }, [])
 
   const filtres = useMemo(
     () => users.filter((u) =>
@@ -89,41 +100,20 @@ export default function AdminMembresPage() {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true)
-    setUsers([...MOCK_USERS])
-    setTimeout(() => setRefreshing(false), 600)
+    loadMembers()
+    setTimeout(() => setRefreshing(false), 800)
   }, [])
 
   const filieresDispo = useMemo(
-    () => MOCK_FACULTES.find((f) => f.nom === form.faculte)?.filieres ?? [],
-    [form.faculte]
+    () => facultes.find((f) => f.nom === form.faculte)?.filieres ?? [],
+    [facultes, form.faculte]
   )
 
   function handleCreate() {
-    if (!form.prenom || !form.nom || !form.email || !form.password) {
-      toast.error("Tous les champs obligatoires doivent être remplis")
-      return
-    }
-    setSaving(true)
-    setTimeout(() => {
-      try {
-        const newUser = createUser({
-          nom: form.nom, prenom: form.prenom, email: form.email,
-          role: form.role,
-          faculte: form.faculte || undefined,
-          filiere: form.filiere || undefined,
-          niveau: form.niveau || undefined,
-        })
-        setUsers((prev) => [...prev, newUser])
-        setCreateOpen(false)
-        setForm({ prenom: "", nom: "", email: "", password: "", role: "membre", faculte: "", filiere: "", niveau: "" })
-        toast.success("Utilisateur créé", {
-          description: `${newUser.prenom} ${newUser.nom} (${newUser.role})`,
-        })
-      } catch {
-        toast.error("Erreur lors de la création")
-      }
-      setSaving(false)
-    }, 500)
+    toast.info("Création d'utilisateur via API non disponible", {
+      description: "Les membres s'inscrivent via le formulaire d'inscription.",
+    })
+    setCreateOpen(false)
   }
 
   return (
@@ -131,7 +121,6 @@ export default function AdminMembresPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Membres</h1>
-          <p className="text-sm text-muted-foreground">{stats.total} membres inscrits</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90"
@@ -233,7 +222,7 @@ export default function AdminMembresPage() {
                     onValueChange={(v) => setForm((f) => ({ ...f, faculte: v ?? "", filiere: "" }))}>
                     <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      {MOCK_FACULTES.map((f) => (
+                      {facultes.map((f) => (
                         <SelectItem key={f.id} value={f.nom} className="text-sm">{f.nom}</SelectItem>
                       ))}
                     </SelectContent>
@@ -256,7 +245,7 @@ export default function AdminMembresPage() {
                   <Select value={form.niveau} onValueChange={(v) => setForm((f) => ({ ...f, niveau: v ?? "" }))}>
                     <SelectTrigger className="h-9 text-sm w-full"><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      {MOCK_NIVEAUX.map((n) => (
+                      {niveaux.map((n) => (
                         <SelectItem key={n.id} value={n.nom} className="text-sm">{n.nom}</SelectItem>
                       ))}
                     </SelectContent>

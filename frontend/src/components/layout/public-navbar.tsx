@@ -16,9 +16,17 @@ export function PublicNavbar() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth()
   const router = useRouter()
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     router.push("/")
+  }
+
+  function handleSoumettre() {
+    if (isAuthenticated) {
+      router.push("/soumettre")
+    } else {
+      router.push("/connexion?from=/soumettre")
+    }
   }
 
   const initials = user ? `${user.prenom.charAt(0)}${user.nom.charAt(0)}` : "?"
@@ -37,16 +45,9 @@ export function PublicNavbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <BookOpen className="h-4 w-4" /> Catalogue
-            </Button>
-          </Link>
-          <Link href="/soumettre">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Upload className="h-4 w-4" /> Déposer un document
-            </Button>
-          </Link>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handleSoumettre}>
+            <Upload className="h-4 w-4" /> Déposer un document
+          </Button>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -73,7 +74,7 @@ export function PublicNavbar() {
                   <BookOpen className="h-3.5 w-3.5" /> Mes documents
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <DropdownMenuItem onClick={() => router.push("/admin")} className="gap-2 text-xs">
+                  <DropdownMenuItem onClick={() => router.push("/gestion")} className="gap-2 text-xs">
                     <BookOpen className="h-3.5 w-3.5" /> Administration
                   </DropdownMenuItem>
                 )}

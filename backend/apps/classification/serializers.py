@@ -9,9 +9,11 @@ class NiveauSerializer(serializers.ModelSerializer):
 
 
 class FiliereSerializer(serializers.ModelSerializer):
+    faculteId = serializers.UUIDField(source="faculte_id", read_only=True)
+
     class Meta:
         model = Filiere
-        fields = ["id", "nom"]
+        fields = ["id", "nom", "faculteId"]
 
 
 class FaculteSerializer(serializers.ModelSerializer):

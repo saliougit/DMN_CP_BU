@@ -1,53 +1,17 @@
 services:
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost/api
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      DJANGO_SETTINGS_MODULE: dmn_bu.settings.production
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: db
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      MEILI_URL: http://search:7700
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
-      MINIO_ENDPOINT: storage:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: dmn-documents
-    volumes:
-      - static_files:/app/staticfiles
-    depends_on:
-      db:
-        condition: service_healthy
-      search:
-        condition: service_started
-      storage:
-        condition: service_started
-    restart: unless-stopped
+  # ─── Infrastructure ───────────────────────────────────────────────────────────
 
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -55,25 +19,151 @@ services:
       retries: 10
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   search:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.9
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
-      MEILI_ENV: production
+      MEILI_ENV:        ${MEILI_ENV:-development}
     volumes:
       - meilisearch_data:/meili_data
+    ports:
+      - "7700:7700"   # API Meilisearch (debug / Meilisearch Cloud sync)
     restart: unless-stopped
 
   storage:
     image: minio/minio:latest
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
     ports:
-      - "9001:9001"  # Console MinIO (accès direct en dev/admin)
+      - "9000:9000"   # API S3 — boto3 Django + SDK externe
+      - "9001:9001"   # Console web MinIO
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Crée le bucket au 1er démarrage (MinIO ne crée pas les buckets automatiquement)
+  storage-init:
+    image: minio/mc:latest
+    depends_on:
+      storage:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET:        ${MINIO_BUCKET:-dmn-documents}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://storage:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+        mc mb --ignore-existing local/$$MINIO_BUCKET;
+        mc anonymous set download local/$$MINIO_BUCKET/public;
+        echo 'Bucket MinIO initialisé.';
+      "
+    restart: "no"
+
+  # ─── Application ──────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: dmn_bu.settings.production
+      DJANGO_SECRET_KEY:      ${DJANGO_SECRET_KEY}
+      ALLOWED_HOSTS:          ${ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS:   ${CORS_ALLOWED_ORIGINS}
+      DB_NAME:                ${DB_NAME}
+      DB_USER:                ${DB_USER}
+      DB_PASSWORD:            ${DB_PASSWORD}
+      DB_HOST:                db
+      REDIS_URL:              redis://redis:6379/0
+      MEILI_URL:              http://search:7700
+      MEILI_MASTER_KEY:       ${MEILI_MASTER_KEY}
+      MINIO_ENDPOINT:         storage:9000
+      MINIO_ROOT_USER:        ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD:    ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET:           ${MINIO_BUCKET:-dmn-documents}
+      SEND_REAL_EMAILS:       ${SEND_REAL_EMAILS:-False}
+      EMAIL_HOST:             ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT:             ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER:        ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD:    ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@budmnucad.sn}
+    volumes:
+      - static_files:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      search:
+        condition: service_started
+      storage-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Worker Celery — tâches asynchrones (emails, traitement PDF…)
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "dmn_bu", "worker", "--loglevel=info", "-c", "4", "-Q", "default"]
+    environment:
+      DJANGO_SETTINGS_MODULE: dmn_bu.settings.production
+      DJANGO_SECRET_KEY:      ${DJANGO_SECRET_KEY}
+      DB_NAME:                ${DB_NAME}
+      DB_USER:                ${DB_USER}
+      DB_PASSWORD:            ${DB_PASSWORD}
+      DB_HOST:                db
+      REDIS_URL:              redis://redis:6379/0
+      MEILI_URL:              http://search:7700
+      MEILI_MASTER_KEY:       ${MEILI_MASTER_KEY}
+      MINIO_ENDPOINT:         storage:9000
+      MINIO_ROOT_USER:        ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD:    ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET:           ${MINIO_BUCKET:-dmn-documents}
+      SEND_REAL_EMAILS:       ${SEND_REAL_EMAILS:-False}
+      EMAIL_HOST:             ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT:             ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER:        ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD:    ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@budmnucad.sn}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Passé au moment du build (compilé dans le bundle JS par Next.js)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+    depends_on:
+      - backend
     restart: unless-stopped
 
   proxy:
@@ -84,13 +174,29 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - static_files:/app/staticfiles:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
     restart: unless-stopped
 
+  # Certbot — renouvellement SSL Let's Encrypt
+  # Usage : docker compose --profile ssl run --rm certbot certonly \
+  #           --webroot -w /var/www/certbot -d votre-domaine.com
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    profiles: ["ssl"]   # ne démarre qu'avec --profile ssl
+    restart: "no"
+
 volumes:
   postgres_data:
+  redis_data:
   meilisearch_data:
   minio_data:
   static_files:
+  certbot_www:
+  certbot_certs:

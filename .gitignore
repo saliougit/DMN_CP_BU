@@ -17,6 +17,9 @@ frontend/.next/
 frontend/node_modules/
 frontend/.env.local
 
+# Credentials locaux (ne jamais committer)
+ACCES.md
+
 # OS
 .DS_Store
 Thumbs.db

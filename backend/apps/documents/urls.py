@@ -5,4 +5,7 @@ from . import views
 router = DefaultRouter()
 router.register("documents", views.DocumentViewSet)
 
-urlpatterns = [path("", include(router.urls))]
+urlpatterns = [
+    path("", include(router.urls)),
+    path("stats/", views.StatsView.as_view(), name="stats"),
+]

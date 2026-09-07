@@ -7,7 +7,7 @@ def _client() -> meilisearch.Client:
     return meilisearch.Client(settings.MEILISEARCH_URL, settings.MEILISEARCH_MASTER_KEY)
 
 
-def _index() -> meilisearch.Index:
+def _index():
     return _client().index("documents")
 
 

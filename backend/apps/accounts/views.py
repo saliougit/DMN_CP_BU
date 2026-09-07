@@ -6,6 +6,19 @@ from .models import User
 from .serializers import UserSerializer, RegisterSerializer
 
 
+class IsAdminRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == "admin"
+
+
+class MembresListView(generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        return User.objects.filter(role="membre").select_related("faculte", "filiere").order_by("-date_joined")
+
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]

@@ -1,5 +1,6 @@
 from django.utils import timezone
-from rest_framework import viewsets, status, permissions
+from django.db.models import Count
+from rest_framework import viewsets, generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -46,6 +47,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(Q(statut="approuve") | Q(soumis_par=user))
             else:
                 qs = qs.filter(statut="approuve")
+        mes = self.request.query_params.get("mes") == "true"
+        if user.is_authenticated and mes:
+            qs = qs.filter(soumis_par=user)
         return qs
 
     def perform_create(self, serializer):
@@ -77,3 +81,35 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not doc.fichier:
             return Response({"detail": "Aucun fichier."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"url": doc.fichier.url})
+
+
+class StatsView(generics.GenericAPIView):
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        from apps.accounts.models import User as UserModel
+        debut_mois = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        approuves = Document.objects.filter(statut="approuve").count()
+        en_attente = Document.objects.filter(statut="en_attente").count()
+        approuves_mois = Document.objects.filter(statut="approuve", date_approbation__gte=debut_mois).count()
+        total_membres = UserModel.objects.filter(role="membre").count()
+        top_facultes = (
+            Document.objects.filter(statut="approuve")
+            .values("faculte__nom")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:6]
+        )
+        docs_par_annee = (
+            Document.objects.filter(statut="approuve")
+            .values("annee")
+            .annotate(count=Count("id"))
+            .order_by("annee")
+        )
+        return Response({
+            "totalDocuments": approuves,
+            "soumissionsEnAttente": en_attente,
+            "totalMembres": total_membres,
+            "documentsApprouvesCeMois": approuves_mois,
+            "topFacultes": [{"nom": r["faculte__nom"] or "", "count": r["count"]} for r in top_facultes],
+            "documentsParAnnee": [{"annee": r["annee"], "count": r["count"]} for r in docs_par_annee],
+        })

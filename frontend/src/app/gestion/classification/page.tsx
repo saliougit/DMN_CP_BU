@@ -1,25 +1,28 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { ClassificationTree } from "@/components/admin/classification-tree"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FolderTree, BookMarked, Layers, Calendar } from "lucide-react"
-import { MOCK_FACULTES, MOCK_DOCUMENTS } from "@/lib/mock-data"
-
-const UNIQUE_ANNEES = new Set(MOCK_DOCUMENTS.map((d) => d.annee))
-
-const STATS = [
-  { icon: FolderTree, label: "Facultés", value: MOCK_FACULTES.length, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950" },
-  { icon: BookMarked, label: "Filières", value: MOCK_FACULTES.reduce((a, f) => a + f.filieres.length, 0), color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950" },
-  { icon: Calendar, label: "Années couvertes", value: UNIQUE_ANNEES.size, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950" },
-  { icon: Layers, label: "Total documents", value: MOCK_DOCUMENTS.length, color: "text-primary", bg: "bg-primary/10" },
-]
+import { FolderTree, BookMarked } from "lucide-react"
+import { api } from "@/lib/api"
+import type { Faculte } from "@/types"
 
 export default function ClassificationPage() {
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+
+  useEffect(() => {
+    api.getFacultes().then(setFacultes).catch(() => {})
+  }, [])
+
+  const STATS = [
+    { icon: FolderTree, label: "Facultés", value: facultes.length, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950" },
+    { icon: BookMarked, label: "Filières", value: facultes.reduce((a, f) => a + f.filieres.length, 0), color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950" },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Classification</h1>
-        <p className="text-sm text-muted-foreground">
-          Gérez l&apos;arborescence des collections : facultés, filières et niveaux
-        </p>
       </div>
 
       {/* Statistiques */}

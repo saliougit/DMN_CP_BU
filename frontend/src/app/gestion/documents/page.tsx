@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search, FileText, Download, Trash2, Eye, MoreHorizontal, RefreshCw,
@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MOCK_DOCUMENTS, MOCK_FACULTES, getNiveauxForFiliere } from "@/lib/mock-data"
+import { api } from "@/lib/api"
+import type { Faculte, Document } from "@/types"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
@@ -40,7 +41,8 @@ interface FileEntry {
 
 export default function AdminDocumentsPage() {
   const router = useRouter()
-  const [docs, setDocs] = useState(MOCK_DOCUMENTS.filter((d) => d.statut === "approuve"))
+  const [docs, setDocs] = useState<Document[]>([])
+  const [facultes, setFacultes] = useState<Faculte[]>([])
   const [recherche, setRecherche] = useState("")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [step, setStep] = useState<"upload" | "classify">("upload")
@@ -48,6 +50,15 @@ export default function AdminDocumentsPage() {
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+
+  function loadDocs() {
+    api.getDocumentsAdmin({ statut: "approuve" }).then(setDocs).catch(() => {})
+  }
+
+  useEffect(() => {
+    loadDocs()
+    api.getFacultes().then(setFacultes).catch(() => {})
+  }, [])
 
   const filtrees = useMemo(
     () => docs.filter((d) =>
@@ -120,11 +131,30 @@ export default function AdminDocumentsPage() {
       return
     }
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setSubmitting(false)
-    toast.success(`${files.length} document(s) publié(s) dans le catalogue`)
-    setSheetOpen(false)
-    resetForm()
+    try {
+      for (const entry of files) {
+        const fd = new FormData()
+        fd.append("titre", entry.titre)
+        fd.append("auteur", entry.auteur)
+        fd.append("type", entry.type)
+        fd.append("faculte", entry.faculte)
+        fd.append("filiere", entry.filiere)
+        fd.append("niveau", entry.niveau)
+        fd.append("annee", String(entry.annee))
+        if (entry.directeur) fd.append("directeur", entry.directeur)
+        if (entry.resume) fd.append("resume", entry.resume)
+        fd.append("fichier", entry.file)
+        await api.uploadDocument(fd)
+      }
+      toast.success(`${files.length} document(s) publié(s) dans le catalogue`)
+      setSheetOpen(false)
+      resetForm()
+      loadDocs()
+    } catch (err: any) {
+      toast.error("Erreur lors de la publication", { description: err?.message })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function computeTitre(entry: FileEntry): string {
@@ -151,19 +181,18 @@ export default function AdminDocumentsPage() {
     })
   }
 
-  const filieres = (faculte: string) =>
-    MOCK_FACULTES.find((f) => f.nom === faculte)?.filieres ?? []
+  const filieres = (faculteId: string) =>
+    facultes.find((f) => f.id === faculteId || f.nom === faculteId)?.filieres ?? []
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Documents du catalogue</h1>
-          <p className="text-sm text-muted-foreground">{docs.length} documents publiés (uploads admin + soumissions approuvées)</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
-            onClick={() => { setRefreshing(true); setDocs([...MOCK_DOCUMENTS.filter((d) => d.statut === "approuve")]); setTimeout(() => setRefreshing(false), 600) }}
+            onClick={() => { setRefreshing(true); loadDocs(); setTimeout(() => setRefreshing(false), 800) }}
             disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Actualiser
           </Button>
@@ -322,7 +351,7 @@ export default function AdminDocumentsPage() {
                             onChange={(e) => updateFile(entry.id, "faculte", e.target.value)}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
                             <option value="">Choisir</option>
-                            {MOCK_FACULTES.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                            {facultes.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
                           </select>
                         </div>
                         <div className="space-y-1">
@@ -342,9 +371,6 @@ export default function AdminDocumentsPage() {
                             disabled={!entry.filiere}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
-                            {getNiveauxForFiliere(entry.filiere, MOCK_FACULTES.find((f) => f.nom === entry.faculte)?.code).map((n) => (
-                              <option key={n.id} value={n.nom}>{n.nom}</option>
-                            ))}
                           </select>
                         </div>
                         <div className="space-y-1">

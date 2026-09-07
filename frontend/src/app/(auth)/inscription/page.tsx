@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
 import { useAuth } from "@/contexts/auth-context"
-import { MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { toast } from "sonner"
+import type { Faculte, Niveau } from "@/types"
 
 const ETAPES = ["Identité", "Scolarité", "Sécurité"]
 
@@ -22,6 +23,13 @@ export default function InscriptionPage() {
   const [etape, setEtape] = useState(0)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
+
+  useEffect(() => {
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
+  }, [])
 
   const [form, setForm] = useState({
     nom: "", prenom: "", email: "",
@@ -38,8 +46,8 @@ export default function InscriptionPage() {
   }
 
   const filieresDispo = useMemo(
-    () => MOCK_FACULTES.find((f) => f.nom === form.faculte)?.filieres ?? [],
-    [form.faculte]
+    () => facultes.find((f) => f.nom === form.faculte)?.filieres ?? [],
+    [facultes, form.faculte]
   )
 
   const etape0Valide = form.nom && form.prenom && form.email
@@ -130,7 +138,7 @@ export default function InscriptionPage() {
                   <select value={form.faculte} onChange={(e) => setField("faculte", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir une faculté</option>
-                    {MOCK_FACULTES.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                    {facultes.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -147,7 +155,7 @@ export default function InscriptionPage() {
                   <select value={form.niveau} onChange={(e) => setField("niveau", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir un niveau</option>
-                    {MOCK_NIVEAUX.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
+                    {niveaux.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
                   </select>
                 </div>
               </>

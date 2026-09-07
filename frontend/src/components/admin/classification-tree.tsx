@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import {
   ChevronRight, ChevronDown, FolderOpen, Folder,
@@ -9,8 +9,8 @@ import {
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { MOCK_FACULTES, MOCK_NIVEAUX, MOCK_DOCUMENTS } from "@/lib/mock-data"
-import type { Document } from "@/types"
+import { api } from "@/lib/api"
+import type { Document, Faculte, Niveau } from "@/types"
 import { TYPE_LABELS } from "@/lib/document-types"
 import { toast } from "sonner"
 
@@ -26,8 +26,8 @@ const NIVEAU_ORDER: Record<string, number> = {
 
 interface FaculteData { id: string; nom: string; code: string; filieres: { id: string; nom: string }[] }
 
-function buildTree(facultes: FaculteData[], deletedIds: Set<string>) {
-  const docs = MOCK_DOCUMENTS.filter((d) => d.statut === "approuve" && !deletedIds.has(d.id))
+function buildTree(facultes: FaculteData[], deletedIds: Set<string>, allDocs: Document[]) {
+  const docs = allDocs.filter((d) => d.statut === "approuve" && !deletedIds.has(d.id))
 
   return facultes.map((fac) => {
     const docsFac = docs.filter((d) => d.faculte === fac.nom)
@@ -189,6 +189,15 @@ function TreeNodeItem({
 export function ClassificationTree() {
   const [recherche, setRecherche] = useState("")
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [allDocs, setAllDocs] = useState<Document[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
+
+  useEffect(() => {
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
+    api.getDocumentsAdmin({ statut: "approuve" }).then(setAllDocs).catch(() => {})
+  }, [])
 
   function handleDelete(id: string, titre: string) {
     setDeletedIds((prev) => new Set([...prev, id]))
@@ -196,8 +205,8 @@ export function ClassificationTree() {
   }
 
   const tree = useMemo(
-    () => buildTree(MOCK_FACULTES as FaculteData[], deletedIds),
-    [deletedIds]
+    () => buildTree(facultes as FaculteData[], deletedIds, allDocs),
+    [facultes, deletedIds, allDocs]
   )
 
   const treeFiltre = useMemo(() => {
@@ -216,8 +225,8 @@ export function ClassificationTree() {
   }, [tree, recherche])
 
   const totalDocs = useMemo(
-    () => MOCK_DOCUMENTS.filter((d) => d.statut === "approuve" && !deletedIds.has(d.id)).length,
-    [deletedIds]
+    () => allDocs.filter((d) => d.statut === "approuve" && !deletedIds.has(d.id)).length,
+    [allDocs, deletedIds]
   )
 
   return (
@@ -238,9 +247,9 @@ export function ClassificationTree() {
       </div>
 
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border border-border/60 rounded-lg px-3 py-2">
-        <span className="flex items-center gap-1.5"><Folder className="h-3.5 w-3.5 text-amber-500" /> {MOCK_FACULTES.length} facultés</span>
-        <span className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5 text-blue-500" /> {MOCK_FACULTES.reduce((s, f) => s + f.filieres.length, 0)} filières</span>
-        <span className="flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-primary" /> {MOCK_NIVEAUX.length} niveaux</span>
+        <span className="flex items-center gap-1.5"><Folder className="h-3.5 w-3.5 text-amber-500" /> {facultes.length} facultés</span>
+        <span className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5 text-blue-500" /> {facultes.reduce((s, f) => s + f.filieres.length, 0)} filières</span>
+        <span className="flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-primary" /> {niveaux.length} niveaux</span>
         <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-muted-foreground" /> {totalDocs} documents publiés</span>
       </div>
 

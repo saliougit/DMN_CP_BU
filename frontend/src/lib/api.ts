@@ -102,8 +102,8 @@ function mapUser(d: Record<string, unknown>): User {
     prenom:    (d.first_name as string) ?? "",
     email:     d.email as string,
     role:      d.role as User["role"],
-    faculte:   (d.faculte as string) || undefined,
-    filiere:   (d.filiere as string) || undefined,
+    faculte:   (d.faculte_nom as string) || (d.faculte as string) || undefined,
+    filiere:   (d.filiere_nom as string) || (d.filiere as string) || undefined,
     createdAt: (d.date_joined as string) ?? new Date().toISOString(),
   }
 }
@@ -201,7 +201,37 @@ export const api = {
 
   // Admin — stats dashboard
   getDashboardStats: (): Promise<DashboardStats> =>
-    fetchApi<DashboardStats>("/admin/stats/", {}, true),
+    fetchApi<DashboardStats>("/stats/", {}, true),
+
+  getStats: (): Promise<DashboardStats> =>
+    fetchApi<DashboardStats>("/stats/", {}, true),
+
+  // Admin — tous les documents avec filtres optionnels
+  getDocumentsAdmin: (filters?: { statut?: string; search?: string }): Promise<Document[]> => {
+    const params = new URLSearchParams()
+    if (filters?.statut) params.set("statut", filters.statut)
+    if (filters?.search) params.set("search", filters.search)
+    return fetchApi<{ results: Record<string, unknown>[]; count: number }>(`/documents/?${params}`, {}, true)
+      .then((r) => r.results.map(mapDocument))
+  },
+
+  // Admin — liste des membres
+  getMembers: (): Promise<User[]> =>
+    fetchApi<{ results: Record<string, unknown>[]; count: number } | Record<string, unknown>[]>("/membres/", {}, true)
+      .then((r) => {
+        const list = Array.isArray(r) ? r : ((r as any).results ?? [])
+        return (list as Record<string, unknown>[]).map(mapUser)
+      }),
+
+  // Membre — mes documents
+  getMesDocuments: (): Promise<Document[]> =>
+    fetchApi<{ results: Record<string, unknown>[]; count: number }>("/documents/?mes=true", {}, true)
+      .then((r) => r.results.map(mapDocument)),
+
+  // Profil — mise à jour
+  updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; telephone: string }>): Promise<User> =>
+    fetchApi<Record<string, unknown>>("/auth/me/", { method: "PATCH", body: JSON.stringify(data) }, true)
+      .then(mapUser),
 
   // Téléchargement sécurisé
   getDownloadUrl: async (id: string): Promise<string> => {

@@ -19,7 +19,7 @@ for i in range(30):
         print("Base de données prête.")
         break
     except psycopg2.OperationalError:
-        print(f"Tentative {i+1}/30 — base non disponible, attente...")
+        print(f"Tentative {i+1}/30 — base non disponible, attente 2s...")
         time.sleep(2)
 else:
     print("ERREUR : impossible de se connecter à la base de données.")
@@ -29,13 +29,10 @@ EOF
 echo ">>> Migrations..."
 python manage.py migrate --noinput
 
-echo ">>> Collecte des fichiers statiques..."
-python manage.py collectstatic --noinput --clear
+# collectstatic uniquement pour le process gunicorn (pas pour les workers Celery)
+if [ "${1:-}" = "gunicorn" ]; then
+    echo ">>> Collecte des fichiers statiques..."
+    python manage.py collectstatic --noinput --clear
+fi
 
-echo ">>> Démarrage Gunicorn..."
-exec gunicorn dmn_bu.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 2 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+exec "$@"

@@ -3,11 +3,15 @@ from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    faculte_nom = serializers.CharField(source="faculte.nom", allow_null=True, read_only=True)
+    filiere_nom = serializers.CharField(source="filiere.nom", allow_null=True, read_only=True)
+
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name",
-                  "role", "telephone", "faculte", "filiere", "date_adhesion", "photo"]
-        read_only_fields = ["id", "role"]
+                  "role", "telephone", "faculte", "filiere", "faculte_nom", "filiere_nom",
+                  "date_adhesion", "photo", "date_joined"]
+        read_only_fields = ["id", "role", "date_joined"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -22,6 +26,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("password_confirm"):
             raise serializers.ValidationError({"password_confirm": "Les mots de passe ne correspondent pas."})
+        if User.objects.filter(email=attrs.get("email", "")).exists():
+            raise serializers.ValidationError({"email": "Un compte avec cette adresse e-mail existe déjà."})
         return attrs
 
     def create(self, validated_data):

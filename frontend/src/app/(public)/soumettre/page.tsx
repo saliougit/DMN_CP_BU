@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Upload, FileText, X, Loader2, CheckCircle2, ArrowLeft } from "lucide-react"
@@ -12,22 +12,33 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
-import { MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { toast } from "sonner"
+import type { Faculte, Niveau } from "@/types"
 
 export default function SoumettrePage() {
   const router = useRouter()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
+
+  useEffect(() => {
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
+  }, [])
 
   const [form, setForm] = useState({
     titre: "", type: "memoire_master",
-    faculte: "", filiere: "", niveau: "", annee: new Date().getFullYear(),
+    faculteId: "", filiereId: "", niveauId: "", annee: new Date().getFullYear(),
     directeur: "", resume: "",
   })
 
-  const filieres = MOCK_FACULTES.find((f) => f.nom === form.faculte)?.filieres ?? []
+  const filieres = useMemo(
+    () => facultes.find((f) => f.id === form.faculteId)?.filieres ?? [],
+    [facultes, form.faculteId]
+  )
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -41,12 +52,28 @@ export default function SoumettrePage() {
     if (!isAuthenticated) { router.push("/connexion"); return }
     if (!file) { toast.error("Veuillez sélectionner un fichier PDF"); return }
     setUploading(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setUploading(false)
-    toast.success("Document soumis avec succès", {
-      description: "Il sera vérifié par un administrateur avant publication.",
-    })
-    router.push("/profil/mes-documents")
+    try {
+      const fd = new FormData()
+      fd.append("titre", form.titre)
+      fd.append("auteur", user ? `${user.prenom} ${user.nom}`.trim() : "")
+      fd.append("type", form.type)
+      fd.append("faculte", form.faculteId)
+      fd.append("filiere", form.filiereId)
+      fd.append("niveau", form.niveauId)
+      fd.append("annee", String(form.annee))
+      if (form.directeur) fd.append("directeur", form.directeur)
+      if (form.resume) fd.append("resume", form.resume)
+      fd.append("fichier", file)
+      await api.soumettreDocument(fd)
+      toast.success("Document soumis avec succès", {
+        description: "Il sera vérifié par un administrateur avant publication.",
+      })
+      router.push("/profil/mes-documents")
+    } catch (err: any) {
+      toast.error("Erreur lors de la soumission", { description: err?.message ?? "Réessayez." })
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -122,27 +149,27 @@ export default function SoumettrePage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Faculté <span className="text-destructive">*</span></Label>
-                  <select value={form.faculte} onChange={(e) => setForm((f) => ({ ...f, faculte: e.target.value, filiere: "" }))}
+                  <select value={form.faculteId} onChange={(e) => setForm((f) => ({ ...f, faculteId: e.target.value, filiereId: "" }))}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary" required>
                     <option value="">Choisir</option>
-                    {MOCK_FACULTES.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                    {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Filière <span className="text-destructive">*</span></Label>
-                  <select value={form.filiere} onChange={(e) => setForm((f) => ({ ...f, filiere: e.target.value }))}
-                    disabled={!form.faculte}
+                  <select value={form.filiereId} onChange={(e) => setForm((f) => ({ ...f, filiereId: e.target.value }))}
+                    disabled={!form.faculteId}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary disabled:opacity-50" required>
                     <option value="">Choisir</option>
-                    {filieres.map((fi) => (<option key={fi.id} value={fi.nom}>{fi.nom}</option>))}
+                    {filieres.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Niveau <span className="text-destructive">*</span></Label>
-                  <select value={form.niveau} onChange={(e) => setForm((f) => ({ ...f, niveau: e.target.value }))}
+                  <select value={form.niveauId} onChange={(e) => setForm((f) => ({ ...f, niveauId: e.target.value }))}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary" required>
                     <option value="">Choisir</option>
-                    {MOCK_NIVEAUX.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
+                    {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                   </select>
                 </div>
                 <div className="col-span-2 space-y-1.5">

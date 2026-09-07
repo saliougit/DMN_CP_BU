@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -15,30 +15,32 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
-import { MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { toast } from "sonner"
+import type { Document, Faculte } from "@/types"
 
 export default function ProfilPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
 
   const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [mesDocuments, setMesDocuments] = useState<Document[]>([])
+  const [facultes, setFacultes] = useState<Faculte[]>([])
   const [form, setForm] = useState({
     nom: user?.nom ?? "", prenom: user?.prenom ?? "",
-    faculte: user?.faculte ?? "", filiere: user?.filiere ?? "",
-    niveau: user?.niveau ?? "",
+    faculteId: "", filiereId: "",
   })
 
-  const filieresDispo = useMemo(
-    () => MOCK_FACULTES.find((f) => f.nom === form.faculte)?.filieres ?? [],
-    [form.faculte]
-  )
+  useEffect(() => {
+    api.getMesDocuments().then(setMesDocuments).catch(() => {})
+    api.getFacultes().then(setFacultes).catch(() => {})
+  }, [])
 
-  const mesDocuments = useMemo(
-    () => MOCK_DOCUMENTS.filter((d) => d.soumisParId === user?.id),
-    [user]
+  const filieresDispo = useMemo(
+    () => facultes.find((f) => f.id === form.faculteId)?.filieres ?? [],
+    [facultes, form.faculteId]
   )
 
   const statsDocs = useMemo(() => ({
@@ -52,9 +54,22 @@ export default function ProfilPage() {
     return null
   }
 
-  function handleSave() {
-    toast.success("Profil mis à jour")
-    setEditing(false)
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.updateProfile({
+        first_name: form.prenom,
+        last_name: form.nom,
+        faculte: form.faculteId || undefined,
+        filiere: form.filiereId || undefined,
+      })
+      toast.success("Profil mis à jour")
+      setEditing(false)
+    } catch {
+      toast.error("Erreur lors de la mise à jour")
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleLogout() {
@@ -155,32 +170,24 @@ export default function ProfilPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Faculté</Label>
-                    <select value={form.faculte} onChange={(e) => setForm((f) => ({ ...f, faculte: e.target.value, filiere: "" }))}
+                    <select value={form.faculteId} onChange={(e) => setForm((f) => ({ ...f, faculteId: e.target.value, filiereId: "" }))}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary">
                       <option value="">Choisir</option>
-                      {MOCK_FACULTES.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                      {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                     </select>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Filière</Label>
-                    <select value={form.filiere} onChange={(e) => setForm((f) => ({ ...f, filiere: e.target.value }))}
-                      disabled={!form.faculte}
+                    <select value={form.filiereId} onChange={(e) => setForm((f) => ({ ...f, filiereId: e.target.value }))}
+                      disabled={!form.faculteId}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary disabled:opacity-50">
                       <option value="">Choisir</option>
-                      {filieresDispo.map((fi) => (<option key={fi.id} value={fi.nom}>{fi.nom}</option>))}
+                      {filieresDispo.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Niveau</Label>
-                    <select value={form.niveau} onChange={(e) => setForm((f) => ({ ...f, niveau: e.target.value }))}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary">
-                      <option value="">Choisir</option>
-                      {MOCK_NIVEAUX.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
-                    </select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button size="sm" className="w-full gap-2 bg-primary hover:bg-primary/90" onClick={handleSave}>
-                      <CheckCircle2 className="h-4 w-4" /> Enregistrer
+                  <div className="col-span-2 flex items-end">
+                    <Button size="sm" className="w-full gap-2 bg-primary hover:bg-primary/90" onClick={handleSave} disabled={saving}>
+                      {saving ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> Enregistrement…</> : <><CheckCircle2 className="h-4 w-4" /> Enregistrer</>}
                     </Button>
                   </div>
                 </div>
@@ -191,7 +198,6 @@ export default function ProfilPage() {
                   <ProfileRow icon={Mail} label="Email" value={user.email} />
                   <ProfileRow icon={BookOpen} label="Faculté" value={user.faculte ?? "Non renseigné"} />
                   <ProfileRow icon={BookOpen} label="Filière" value={user.filiere ?? "Non renseigné"} />
-                  <ProfileRow icon={GraduationCap} label="Niveau" value={user.niveau ?? "Non renseigné"} />
                 </div>
               )}
             </CardContent>

@@ -1,4 +1,6 @@
-import { useMemo } from "react"
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
 import {
   FileText,
   ClipboardList,
@@ -14,51 +16,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
-import { MOCK_USERS } from "@/lib/mock-users"
+import { api } from "@/lib/api"
+import type { DashboardStats, Document } from "@/types"
 
 export default function AdminDashboard() {
-  const stats = useMemo(() => {
-    const approuves = MOCK_DOCUMENTS.filter((d) => d.statut === "approuve")
-    const enAttente = MOCK_DOCUMENTS.filter((d) => d.statut === "en_attente")
-    const rejetes = MOCK_DOCUMENTS.filter((d) => d.statut === "rejete")
+  const [statsData, setStatsData] = useState<DashboardStats | null>(null)
+  const [recentSubs, setRecentSubs] = useState<Document[]>([])
 
-    const moisCourant = new Date().getMonth()
-    const anneeCourante = new Date().getFullYear()
-    const approuvesCeMois = approuves.filter((d) => {
-      if (!d.approuveLe) return false
-      const date = new Date(d.approuveLe)
-      return date.getMonth() === moisCourant && date.getFullYear() === anneeCourante
-    })
-
-    const faculteCount = new Map<string, number>()
-    MOCK_DOCUMENTS.forEach((d) => {
-      faculteCount.set(d.faculte, (faculteCount.get(d.faculte) ?? 0) + 1)
-    })
-    const topFacultes = [...faculteCount.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([nom, count]) => ({
-        nom,
-        count,
-        pct: Math.round((count / MOCK_DOCUMENTS.length) * 100),
-      }))
-
-    const totalMembres = MOCK_USERS.length
-
-    return {
-      totalApprouves: approuves.length,
-      enAttente: enAttente.length,
-      rejetes: rejetes.length,
-      approuvesCeMois: approuvesCeMois.length,
-      totalMembres,
-      topFacultes,
-    }
+  useEffect(() => {
+    api.getDashboardStats().then(setStatsData).catch(() => {})
+    api.getSoumissions().then((docs) => setRecentSubs(docs.slice(0, 5))).catch(() => {})
   }, [])
 
-  const RECENT_SUBMISSIONS = useMemo(() => {
-    const enAttente = MOCK_DOCUMENTS.filter((d) => d.statut === "en_attente")
-    return enAttente.slice(0, 5).map((d) => {
+  const stats = useMemo(() => ({
+    totalApprouves: statsData?.totalDocuments ?? 0,
+    enAttente: statsData?.soumissionsEnAttente ?? 0,
+    rejetes: 0,
+    approuvesCeMois: statsData?.documentsApprouvesCeMois ?? 0,
+    totalMembres: statsData?.totalMembres ?? 0,
+    topFacultes: (statsData?.topFacultes ?? []).map((f) => ({
+      nom: f.nom,
+      count: f.count,
+      pct: statsData && statsData.totalDocuments > 0
+        ? Math.round((f.count / statsData.totalDocuments) * 100)
+        : 0,
+    })),
+  }), [statsData])
+
+  const RECENT_SUBMISSIONS = useMemo(() =>
+    recentSubs.map((d) => {
       const days = Math.floor((Date.now() - new Date(d.soumisLe).getTime()) / 86400000)
       const soumisLe = days === 0 ? "aujourd'hui" : days === 1 ? "hier" : `il y a ${days} jours`
       return {
@@ -69,8 +55,8 @@ export default function AdminDashboard() {
         faculte: d.faculte,
         soumisLe,
       }
-    })
-  }, [])
+    }),
+  [recentSubs])
 
   const STATS_CARDS = [
     {
@@ -100,8 +86,8 @@ export default function AdminDashboard() {
     },
     {
       title: "Téléchargements",
-      value: String(Math.max(0, stats.totalApprouves * 37 - 42)),
-      change: "Estimation (mock)",
+      value: "—",
+      change: "Statistiques à venir",
       icon: TrendingUp,
       color: "text-purple-600",
       bg: "bg-purple-50 dark:bg-purple-950",
@@ -122,7 +108,6 @@ export default function AdminDashboard() {
       {/* En-tête page */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-sm text-muted-foreground">Vue d&apos;ensemble de la bibliothèque numérique</p>
       </div>
 
       {/* Cartes stats */}
@@ -151,9 +136,8 @@ export default function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base">Soumissions récentes</CardTitle>
-              <CardDescription>Documents en attente de validation</CardDescription>
             </div>
-            <Link href="/admin/soumissions">
+            <Link href="/gestion/soumissions">
               <Button variant="outline" size="sm" className="gap-1.5">
                 Tout voir
                 <ArrowUpRight className="h-3.5 w-3.5" />

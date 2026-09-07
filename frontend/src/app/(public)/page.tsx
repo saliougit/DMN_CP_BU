@@ -1,15 +1,17 @@
+"use client"
+
+import { useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { BookOpen, FileText, GraduationCap, Users, ClipboardList, Archive, Lightbulb } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { BookOpen, FileText, GraduationCap, Users, ClipboardList, Archive, Lightbulb, Upload } from "lucide-react"
 import { SearchBar } from "@/components/search/search-bar"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_DOCUMENTS, MOCK_FACULTES } from "@/lib/mock-data"
-
-const published = MOCK_DOCUMENTS.filter((d) => d.statut !== "en_attente")
+import { useAuth } from "@/contexts/auth-context"
 
 const STATS = [
-  { icon: FileText, label: "Documents", value: String(published.length) },
-  { icon: BookOpen, label: "Facultés couvertes", value: String(MOCK_FACULTES.length) },
+  { icon: FileText, label: "Documents", value: "300+" },
+  { icon: BookOpen, label: "Facultés couvertes", value: "10+" },
   { icon: Users, label: "Membres actifs", value: "300+" },
 ]
 
@@ -29,21 +31,85 @@ const RECENT_TYPES = [
   { label: "Articles de recherche", href: "/recherche?type=article", color: "bg-lime-50 text-lime-700 dark:bg-lime-950 dark:text-lime-300" },
 ]
 
+function GlowButton() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [mouse, setMouse] = useState({ x: 0, y: 0, inside: false })
+
+  function handleMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
+    const rect = btnRef.current!.getBoundingClientRect()
+    setMouse({ x: e.clientX - rect.left, y: e.clientY - rect.top, inside: true })
+  }
+
+  function handleMouseLeave() {
+    setMouse((m) => ({ ...m, inside: false }))
+  }
+
+  function handleClick() {
+    if (isAuthenticated) {
+      router.push("/soumettre")
+    } else {
+      router.push("/connexion?from=/soumettre")
+    }
+  }
+
+  return (
+    <button
+      ref={btnRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+      className="relative overflow-hidden inline-flex items-center gap-2.5 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all duration-200 hover:shadow-primary/30 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98]"
+      style={{
+        background: mouse.inside
+          ? `radial-gradient(circle at ${mouse.x}px ${mouse.y}px, hsl(var(--primary) / 0.7) 0%, hsl(var(--primary)) 55%)`
+          : undefined,
+      }}
+    >
+      {mouse.inside && (
+        <span
+          className="pointer-events-none absolute rounded-full opacity-30 blur-xl transition-all duration-75"
+          style={{
+            width: 120,
+            height: 120,
+            left: mouse.x - 60,
+            top: mouse.y - 60,
+            background: "white",
+          }}
+        />
+      )}
+      <Upload className="relative h-4 w-4" />
+      <span className="relative">Déposer un document</span>
+    </button>
+  )
+}
+
 export default function HomePage() {
   return (
     <>
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center overflow-hidden px-4 py-20 sm:py-28">
-        {/* Fond décoratif */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/8 via-transparent to-transparent"
         />
 
-        {/* Logo centré */}
+        {/* Logo avec animation au survol */}
         <div className="mb-6 flex flex-col items-center gap-3">
-          <div className="relative h-40 w-40 overflow-hidden rounded-full ring-4 ring-primary/20 shadow-xl bg-white dark:bg-white p-1">
-            <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" priority />
+          <div className="group relative h-40 w-40 cursor-pointer">
+            {/* Halo pulsant au survol */}
+            <span className="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-xl transition-all duration-500 group-hover:opacity-100 group-hover:scale-125" />
+            <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 transition-all duration-500 group-hover:ring-primary/60 group-hover:ring-8" />
+            <div className="relative h-full w-full overflow-hidden rounded-full bg-white shadow-xl transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-primary/30 dark:bg-white p-1">
+              <Image
+                src="/logo.png"
+                alt="Logo DMN"
+                fill
+                className="object-contain transition-all duration-500 group-hover:brightness-110"
+                priority
+              />
+            </div>
           </div>
           <Badge variant="secondary" className="text-xs px-3 py-1">
             DMN — Daara Madjmahoun Noreyni · UCAD · Dakar
@@ -52,15 +118,17 @@ export default function HomePage() {
 
         <h1 className="mb-3 text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
           Bibliothèque Numérique
-          {/* <span className="block text-primary">Mouride</span> */}
         </h1>
         <p className="mb-8 max-w-xl text-center text-muted-foreground text-sm sm:text-base">
           Accédez à l&apos;ensemble des travaux académiques des membres — mémoires, thèses et articles — classés par faculté, niveau et année.
         </p>
 
-        {/* Grande barre de recherche */}
         <div className="w-full max-w-2xl">
           <SearchBar size="hero" autoFocus />
+        </div>
+
+        <div className="mt-6">
+          <GlowButton />
         </div>
 
         {/* Recherches rapides */}
@@ -80,7 +148,7 @@ export default function HomePage() {
 
       {/* Stats */}
       <section className="border-y border-border/60 bg-muted/30 py-10 px-4">
-        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 sm:grid-cols-4">
+        <div className="mx-auto grid max-w-2xl grid-cols-3 gap-6 justify-items-center">
           {STATS.map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">

@@ -6,6 +6,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
     faculte_nom = serializers.CharField(source="faculte.nom",   read_only=True)
     filiere_nom = serializers.CharField(source="filiere.nom",   read_only=True, allow_null=True)
     niveau_nom  = serializers.CharField(source="niveau.nom",    read_only=True)
+    soumis_par_nom = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Document
@@ -15,14 +16,19 @@ class DocumentListSerializer(serializers.ModelSerializer):
             "filiere", "filiere_nom",
             "niveau",  "niveau_nom",
             "annee", "resume", "mots_cles", "directeur", "pages",
-            "date_soumission",
+            "fichier", "date_soumission", "soumis_par", "soumis_par_nom",
         ]
+
+    def get_soumis_par_nom(self, obj):
+        if obj.soumis_par:
+            return f"{obj.soumis_par.first_name} {obj.soumis_par.last_name}".strip() or obj.soumis_par.username
+        return None
 
 
 class DocumentDetailSerializer(DocumentListSerializer):
     class Meta(DocumentListSerializer.Meta):
         fields = DocumentListSerializer.Meta.fields + [
-            "fichier", "approuve_par", "date_approbation", "raison_rejet",
+            "approuve_par", "date_approbation", "raison_rejet",
         ]
 
 

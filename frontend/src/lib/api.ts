@@ -71,6 +71,14 @@ async function tryRefresh(): Promise<boolean> {
 
 // ─── Mapping Django → types frontend ─────────────────────────────────────────
 
+function publicMinioUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  return url
+    .replace(/^http:\/\/storage:9000\//, "http://localhost/minio/")
+    .replace(/^http:\/\/minio:9000\//, "http://localhost/minio/")
+    .replace(/^https:\/\/localhost\//, "http://localhost/")  // custom_domain génère https par défaut
+}
+
 function mapDocument(d: Record<string, unknown>): Document {
   return {
     id:            d.id as string,
@@ -85,7 +93,7 @@ function mapDocument(d: Record<string, unknown>): Document {
     directeur:     (d.directeur  as string) || undefined,
     resume:        (d.resume     as string) || undefined,
     motsCles:      (d.mots_cles  as string[]) ?? [],
-    fichierUrl:    (d.fichier    as string) || undefined,
+    fichierUrl:    publicMinioUrl((d.fichier as string) || undefined),
     pages:         (d.pages      as number) || undefined,
     soumisParId:   (d.soumis_par as string) ?? "",
     soumisLe:      d.date_soumission as string,
@@ -102,8 +110,9 @@ function mapUser(d: Record<string, unknown>): User {
     prenom:    (d.first_name as string) ?? "",
     email:     d.email as string,
     role:      d.role as User["role"],
-    faculte:   (d.faculte_nom as string) || (d.faculte as string) || undefined,
-    filiere:   (d.filiere_nom as string) || (d.filiere as string) || undefined,
+    faculte:   (d.faculte_nom as string) || undefined,
+    filiere:   (d.filiere_nom as string) || undefined,
+    niveau:    (d.niveau_nom  as string) || undefined,
     createdAt: (d.date_joined as string) ?? new Date().toISOString(),
   }
 }
@@ -133,7 +142,8 @@ export const api = {
   },
 
   register: async (form: {
-    username: string; email: string; first_name: string; last_name: string; password: string; telephone?: string
+    username: string; email: string; first_name: string; last_name: string; password: string
+    telephone?: string; faculte?: string; filiere?: string; niveau?: string
   }): Promise<void> => {
     await fetchApi("/auth/register/", { method: "POST", body: JSON.stringify({ ...form, password_confirm: form.password }) })
   },
@@ -162,7 +172,8 @@ export const api = {
   },
 
   getDocument: async (id: string): Promise<Document> => {
-    const d = await fetchApi<Record<string, unknown>>(`/documents/${id}/`)
+    // auth=true pour que les membres voient leurs propres docs en attente
+    const d = await fetchApi<Record<string, unknown>>(`/documents/${id}/`, {}, true)
     return mapDocument(d)
   },
 
@@ -199,6 +210,10 @@ export const api = {
       body:    formData,
     }).then((r) => r.json()).then(mapDocument),
 
+  // Stats publiques (sans auth)
+  getPublicStats: (): Promise<{ totalDocuments: number; totalFacultes: number; totalMembres: number }> =>
+    fetchApi("/public-stats/"),
+
   // Admin — stats dashboard
   getDashboardStats: (): Promise<DashboardStats> =>
     fetchApi<DashboardStats>("/stats/", {}, true),
@@ -229,13 +244,20 @@ export const api = {
       .then((r) => r.results.map(mapDocument)),
 
   // Profil — mise à jour
-  updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; telephone: string }>): Promise<User> =>
+  updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; niveau: string; telephone: string }>): Promise<User> =>
     fetchApi<Record<string, unknown>>("/auth/me/", { method: "PATCH", body: JSON.stringify(data) }, true)
       .then(mapUser),
+
+  // Mise à jour document (admin)
+  updateDocument: (id: string, data: Record<string, unknown>): Promise<Document> =>
+    fetchApi<Record<string, unknown>>(`/documents/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }, true).then(mapDocument),
 
   // Téléchargement sécurisé
   getDownloadUrl: async (id: string): Promise<string> => {
     const d = await fetchApi<{ url: string }>(`/documents/${id}/download/`, {}, true)
-    return d.url
+    return publicMinioUrl(d.url) ?? d.url
   },
 }

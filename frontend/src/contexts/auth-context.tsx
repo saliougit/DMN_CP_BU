@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         last_name:  form.nom,
         password:   form.password,
         telephone:  form.telephone,
+        faculte:    form.faculte  || undefined,
+        filiere:    form.filiere  || undefined,
+        niveau:     form.niveau   || undefined,
       })
       // Connexion automatique après inscription
       return login(form.email, form.password)

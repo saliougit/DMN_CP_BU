@@ -5,14 +5,14 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Download, FileText, Calendar, User,
-  GraduationCap, BookOpen, Tag
+  GraduationCap, BookOpen
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { MOCK_DOCUMENTS } from "@/lib/mock-data"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
+import { DmnLoader } from "@/components/ui/dmn-loader"
+import { api } from "@/lib/api"
 import dynamic from "next/dynamic"
 const PdfViewer = dynamic(
   () => import("@/components/documents/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
@@ -27,21 +27,16 @@ export default function DocumentDetailPage() {
   const [pdfPage, setPdfPage] = useState(1)
 
   useEffect(() => {
-    const found = MOCK_DOCUMENTS.find((d) => d.id === params.id)
-    setDoc(found ?? null)
-    setLoading(false)
+    api.getDocument(params.id)
+      .then(setDoc)
+      .catch(() => setDoc(null))
+      .finally(() => setLoading(false))
   }, [params.id])
 
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="flex gap-8">
-          <Skeleton className="w-[360px] h-[400px] rounded-xl flex-shrink-0" />
-          <div className="flex-1 space-y-4">
-            <Skeleton className="h-[600px] w-full rounded-xl" />
-          </div>
-        </div>
+        <DmnLoader size="lg" />
       </div>
     )
   }
@@ -89,7 +84,13 @@ export default function DocumentDetailPage() {
                 <MetaRow icon={GraduationCap} label="Niveau" value={doc.niveau} />
                 <MetaRow icon={BookOpen} label="Faculté" value={doc.faculte} />
                 {doc.filiere && <MetaRow icon={BookOpen} label="Filière" value={doc.filiere} />}
-                {doc.directeur && <MetaRow icon={User} label="Directeur" value={doc.directeur} />}
+                {doc.directeur && (() => {
+                  const parts = doc.directeur!.split(" / ")
+                  return <>
+                    <MetaRow icon={User} label="Directeur de mémoire" value={parts[0]?.trim() ?? doc.directeur!} />
+                    {parts[1] && <MetaRow icon={User} label="Encadrant" value={parts[1].trim()} />}
+                  </>
+                })()}
                 <MetaRow icon={Calendar} label="Année" value={String(doc.annee)} />
               </div>
 

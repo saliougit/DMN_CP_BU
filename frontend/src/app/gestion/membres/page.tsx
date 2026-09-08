@@ -27,6 +27,13 @@ function getInitials(nom: string, prenom: string): string {
   return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase()
 }
 
+function formatDate(iso: string | undefined): string {
+  if (!iso) return "—"
+  try {
+    return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+  } catch { return iso }
+}
+
 function MemberCard({ user }: { user: User }) {
   return (
     <Card className="hover:shadow-sm transition-shadow">
@@ -46,7 +53,7 @@ function MemberCard({ user }: { user: User }) {
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-xs text-muted-foreground">
               {user.faculte && <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {user.faculte}</span>}
               {user.niveau && <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> {user.niveau}</span>}
-              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Depuis {user.createdAt.split("-")[0]}</span>
+              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Depuis le {formatDate(user.createdAt)}</span>
             </div>
           </div>
           <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px] flex-shrink-0">

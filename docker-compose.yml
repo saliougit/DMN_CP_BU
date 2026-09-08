@@ -76,7 +76,7 @@ services:
       /bin/sh -c "
         mc alias set local http://storage:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
         mc mb --ignore-existing local/$$MINIO_BUCKET;
-        mc anonymous set download local/$$MINIO_BUCKET/public;
+        mc anonymous set download local/$$MINIO_BUCKET;
         echo 'Bucket MinIO initialisé.';
       "
     restart: "no"
@@ -100,6 +100,7 @@ services:
       MEILI_URL:              http://search:7700
       MEILI_MASTER_KEY:       ${MEILI_MASTER_KEY}
       MINIO_ENDPOINT:         storage:9000
+      MINIO_PUBLIC_ENDPOINT:  ${MINIO_PUBLIC_ENDPOINT:-localhost/minio}
       MINIO_ROOT_USER:        ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD:    ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET:           ${MINIO_BUCKET:-dmn-documents}
@@ -139,6 +140,7 @@ services:
       MEILI_URL:              http://search:7700
       MEILI_MASTER_KEY:       ${MEILI_MASTER_KEY}
       MINIO_ENDPOINT:         storage:9000
+      MINIO_PUBLIC_ENDPOINT:  ${MINIO_PUBLIC_ENDPOINT:-localhost/minio}
       MINIO_ROOT_USER:        ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD:    ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET:           ${MINIO_BUCKET:-dmn-documents}

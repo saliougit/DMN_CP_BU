@@ -1,6 +1,48 @@
+import os
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from celery import shared_task
-from django.core.mail import send_mail
 from django.conf import settings
+from django.core.mail import get_connection
+from django.template.loader import render_to_string
+
+_LOGO_PATH = os.path.join(
+    os.path.dirname(__file__), "templates", "emails", "logo.png"
+)
+
+
+def _send(subject: str, template: str, context: dict, recipient: str):
+    html = render_to_string(template, context)
+    text = f"Assalâmou Alaïkoum,\n\n{subject}"
+
+    # multipart/related so Gmail shows the CID logo inline
+    outer = MIMEMultipart("related")
+    outer["Subject"] = subject
+    outer["From"] = settings.DEFAULT_FROM_EMAIL
+    outer["To"] = recipient
+
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(text, "plain", "utf-8"))
+    alt.attach(MIMEText(html, "html", "utf-8"))
+    outer.attach(alt)
+
+    if os.path.exists(_LOGO_PATH):
+        with open(_LOGO_PATH, "rb") as f:
+            img = MIMEImage(f.read())
+        img.add_header("Content-ID", "<dmn_logo>")
+        img.add_header("Content-Disposition", "inline", filename="logo.png")
+        outer.attach(img)
+
+    conn = get_connection()
+    conn.open()
+    conn.connection.sendmail(
+        settings.EMAIL_HOST_USER,
+        [recipient],
+        outer.as_string(),
+    )
+    conn.close()
 
 
 @shared_task(queue="default", bind=True, max_retries=3)
@@ -15,19 +57,13 @@ def notifier_approbation(self, doc_id: str):
     if not destinataire or not destinataire.email or destinataire.role == "admin":
         return
 
-    nom = destinataire.get_full_name() or destinataire.email
+    nom = destinataire.get_full_name() or destinataire.username
     try:
-        send_mail(
-            subject=f"[DMN BU] Votre document a été approuvé — {doc.titre}",
-            message=(
-                f"Bonjour {nom},\n\n"
-                f"Votre document « {doc.titre} » a été approuvé et est maintenant "
-                f"disponible dans la bibliothèque numérique du Daara Madjmahoun Noreyni UCAD.\n\n"
-                f"Cordialement,\nLa Commission Pédagogique"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[destinataire.email],
-            fail_silently=False,
+        _send(
+            subject=f"[DMN-BU] Votre document a été approuvé — {doc.titre}",
+            template="emails/approbation.html",
+            context={"doc": doc, "nom": nom},
+            recipient=destinataire.email,
         )
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60)
@@ -45,21 +81,13 @@ def notifier_rejet(self, doc_id: str):
     if not destinataire or not destinataire.email or destinataire.role == "admin":
         return
 
-    nom = destinataire.get_full_name() or destinataire.email
-    motif = f"\n\nMotif : {doc.raison_rejet}" if doc.raison_rejet else ""
+    nom = destinataire.get_full_name() or destinataire.username
     try:
-        send_mail(
-            subject=f"[DMN BU] Votre document n'a pas été retenu — {doc.titre}",
-            message=(
-                f"Bonjour {nom},\n\n"
-                f"Votre document « {doc.titre} » n'a malheureusement pas pu être retenu "
-                f"dans la bibliothèque numérique.{motif}\n\n"
-                f"Pour toute question, contactez la commission pédagogique.\n\n"
-                f"Cordialement,\nLa Commission Pédagogique"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[destinataire.email],
-            fail_silently=False,
+        _send(
+            subject=f"[DMN-BU] Décision de la Commission Pédagogique — {doc.titre}",
+            template="emails/rejet.html",
+            context={"doc": doc, "nom": nom},
+            recipient=destinataire.email,
         )
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60)

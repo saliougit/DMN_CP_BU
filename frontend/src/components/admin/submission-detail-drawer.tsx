@@ -24,6 +24,19 @@ import type { Faculte } from "@/types"
 import { cn } from "@/lib/utils"
 import type { Document } from "@/types"
 
+function formatDatetime(iso: string | undefined) {
+  if (!iso) return "—"
+  try {
+    const d = new Date(iso)
+    const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
+    const h = String(d.getHours()).padStart(2, "0")
+    const m = String(d.getMinutes()).padStart(2, "0")
+    return `le ${date} à ${h}h${m}`
+  } catch {
+    return iso
+  }
+}
+
 const TYPE_LABELS: Record<string, string> = {
   memoire_licence: "Mémoire Licence",
   memoire_master: "Mémoire Master",
@@ -173,6 +186,10 @@ export function SubmissionDetailDrawer({
     ? { faculte: doc?.faculte ?? "", filiere: doc?.filiere ?? "", niveau: doc?.niveau ?? "" }
     : (classif ?? { faculte: doc?.faculte ?? "", filiere: doc?.filiere ?? "", niveau: doc?.niveau ?? "" })
 
+  const dirParts = (current.directeur ?? "").split(" / ")
+  const dirMemoire = dirParts[0]?.trim() ?? ""
+  const encadrant = dirParts.slice(1).join(" / ").trim()
+
   function handleSaveEdit() {
     setEditMode(false)
     // En prod: appel API PATCH
@@ -202,7 +219,7 @@ export function SubmissionDetailDrawer({
             className="h-8 text-sm font-semibold border-primary/50 focus-visible:ring-0" />
         : <span className="line-clamp-2">{doc.titre}</span>
       }
-      description={`Soumis le ${doc.soumisLe} · ${doc.auteur}`}
+      description={`Soumis ${formatDatetime(doc.soumisLe)} · ${doc.auteur}`}
       footer={
         <div className="flex items-center gap-2 w-full">
           {editMode ? (
@@ -265,9 +282,18 @@ export function SubmissionDetailDrawer({
                   <EditableField icon={Calendar} label="Année de soutenance" value={String(current.annee)}
                     edit={editMode} type="number"
                     onChange={(v) => setDraft((d) => ({ ...d, annee: Number(v) }))} />
-                  <EditableField icon={User} label="Directeur de mémoire" value={current.directeur ?? ""}
+                  <EditableField icon={User} label="Directeur de mémoire" value={dirMemoire}
                     edit={editMode}
-                    onChange={(v) => setDraft((d) => ({ ...d, directeur: v }))} />
+                    onChange={(v) => setDraft((d) => {
+                      const enc = (d.directeur ?? current.directeur ?? "").split(" / ").slice(1).join(" / ").trim()
+                      return { ...d, directeur: enc ? `${v} / ${enc}` : v }
+                    })} />
+                  <EditableField icon={User} label="Encadrant" value={encadrant}
+                    edit={editMode}
+                    onChange={(v) => setDraft((d) => {
+                      const dir = (d.directeur ?? current.directeur ?? "").split(" / ")[0]?.trim() ?? ""
+                      return { ...d, directeur: v ? `${dir} / ${v}` : dir }
+                    })} />
                   <EditableField icon={FileText} label="Nombre de pages" value={String(current.pages ?? "")}
                     edit={editMode} type="number"
                     onChange={(v) => setDraft((d) => ({ ...d, pages: Number(v) }))} />

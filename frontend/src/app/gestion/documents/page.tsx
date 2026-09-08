@@ -20,7 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { api } from "@/lib/api"
-import type { Faculte, Document } from "@/types"
+import type { Faculte, Niveau, Document } from "@/types"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
@@ -37,12 +37,65 @@ interface FileEntry {
   annee: number
   directeur: string
   resume: string
+  parsed: boolean // true si le nom a été parsé avec succès
+}
+
+const TYPE_MAP: Record<string, string> = {
+  master: "memoire_master",
+  licence: "memoire_licence",
+  doctorat: "these_doctorat",
+  these: "these_doctorat",
+  thèse: "these_doctorat",
+  article: "article",
+  rapport: "rapport",
+}
+
+function fuzzyMatch(query: string, choices: string[]): string {
+  const q = query.toLowerCase().replace(/[-_]/g, " ").trim()
+  return choices.find((c) => c.toLowerCase().replace(/[-_]/g, " ").includes(q)) ??
+    choices.find((c) => q.includes(c.toLowerCase().replace(/[-_]/g, " ").substring(0, 4))) ?? ""
+}
+
+function parseFilename(
+  name: string,
+  facultes: Faculte[]
+): Partial<FileEntry> & { parsed: boolean } {
+  // Format attendu : PrenomNom__2024__master__FSJP__NomFiliere.pdf
+  const base = name.replace(/\.pdf$/i, "")
+  const parts = base.split("__")
+
+  if (parts.length < 2) {
+    // Parsing minimal : juste l'année si dispo
+    const yearMatch = base.match(/\b(19|20)\d{2}\b/)
+    const auteur = base.replace(yearMatch?.[0] ?? "", "").replace(/[-_]+/g, " ").trim()
+    return { auteur, annee: yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear(), parsed: false }
+  }
+
+  const auteur = (parts[0] ?? "").replace(/[-_]+/g, " ").trim()
+  const annee  = parseInt(parts[1] ?? "") || new Date().getFullYear()
+  const typeKey = (parts[2] ?? "").toLowerCase()
+  const type    = TYPE_MAP[typeKey] ?? "memoire_master"
+  const facCode = (parts[3] ?? "").toUpperCase()
+  const filNom  = (parts[4] ?? "").replace(/[-_]+/g, " ").trim()
+
+  const fac = facultes.find((f) => f.code?.toUpperCase() === facCode)
+  const facId = fac?.id ?? ""
+  const filId = fac
+    ? (fuzzyMatch(filNom, fac.filieres.map((fi) => fi.nom))
+        ? fac.filieres.find((fi) =>
+            fi.nom.toLowerCase().includes(filNom.toLowerCase().substring(0, 4))
+          )?.id ?? ""
+        : "")
+    : ""
+
+  return { auteur, annee, type, faculte: facId, filiere: filId, parsed: parts.length >= 4 }
 }
 
 export default function AdminDocumentsPage() {
   const router = useRouter()
   const [docs, setDocs] = useState<Document[]>([])
   const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
   const [recherche, setRecherche] = useState("")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [step, setStep] = useState<"upload" | "classify">("upload")
@@ -58,6 +111,7 @@ export default function AdminDocumentsPage() {
   useEffect(() => {
     loadDocs()
     api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
   }, [])
 
   const filtrees = useMemo(
@@ -89,19 +143,23 @@ export default function AdminDocumentsPage() {
   function addFiles(newFiles: FileList | File[]) {
     const entries: FileEntry[] = Array.from(newFiles)
       .filter((f) => f.type === "application/pdf")
-      .map((f) => ({
-        id: crypto.randomUUID(),
-        file: f,
-        titre: "",
-        auteur: "",
-        type: "memoire_master",
-        faculte: "",
-        filiere: "",
-        niveau: "",
-        annee: new Date().getFullYear(),
-        directeur: "",
-        resume: "",
-      }))
+      .map((f) => {
+        const parsed = parseFilename(f.name, facultes)
+        return {
+          id: crypto.randomUUID(),
+          file: f,
+          titre: "",
+          auteur: parsed.auteur ?? "",
+          type: parsed.type ?? "memoire_master",
+          faculte: parsed.faculte ?? "",
+          filiere: parsed.filiere ?? "",
+          niveau: "",
+          annee: parsed.annee ?? new Date().getFullYear(),
+          directeur: "",
+          resume: "",
+          parsed: parsed.parsed ?? false,
+        }
+      })
     if (entries.length === 0) {
       toast.error("Seuls les fichiers PDF sont acceptés")
       return
@@ -182,7 +240,7 @@ export default function AdminDocumentsPage() {
   }
 
   const filieres = (faculteId: string) =>
-    facultes.find((f) => f.id === faculteId || f.nom === faculteId)?.filieres ?? []
+    facultes.find((f) => f.id === faculteId)?.filieres ?? []
 
   return (
     <div className="space-y-6">
@@ -291,6 +349,12 @@ export default function AdminDocumentsPage() {
                 <p className="text-xs text-muted-foreground mt-1">ou cliquez pour parcourir — plusieurs fichiers acceptés</p>
                 <input id="sheet-pdf-upload" type="file" accept=".pdf" multiple className="hidden"
                   onChange={(e) => { if (e.target.files && e.target.files.length > 0) addFiles(e.target.files) }} />
+                <div className="mt-5 rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-left w-full">
+                  <p className="text-[11px] font-semibold text-primary mb-1.5">Format de nommage recommandé</p>
+                  <code className="text-[11px] text-foreground block mb-1">PrenomNom__ANNEE__TYPE__CODE_FAC__NomFiliere.pdf</code>
+                  <p className="text-[10px] text-muted-foreground">Exemple : <span className="font-mono">SaliouNiane__2024__master__FSJP__Droit-Prive.pdf</span></p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Types : <span className="font-mono">licence · master · doctorat · article · rapport</span></p>
+                </div>
               </div>
             ) : (
               /* Étape 2 : Classification */
@@ -314,6 +378,9 @@ export default function AdminDocumentsPage() {
                           <FileText className="h-4 w-4 text-primary flex-shrink-0" />
                           <span className="text-xs font-medium truncate">{entry.file.name}</span>
                           <Badge variant="outline" className="text-[9px]">{(entry.file.size / 1024 / 1024).toFixed(1)} Mo</Badge>
+                          {entry.parsed
+                            ? <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Auto-parsé</Badge>
+                            : <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300">À compléter</Badge>}
                         </div>
                         <button onClick={() => removeFile(entry.id)}
                           className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
@@ -351,7 +418,7 @@ export default function AdminDocumentsPage() {
                             onChange={(e) => updateFile(entry.id, "faculte", e.target.value)}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
                             <option value="">Choisir</option>
-                            {facultes.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                            {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                           </select>
                         </div>
                         <div className="space-y-1">
@@ -361,7 +428,7 @@ export default function AdminDocumentsPage() {
                             disabled={!entry.faculte}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
-                            {fac.map((fi) => (<option key={fi.id} value={fi.nom}>{fi.nom}</option>))}
+                            {fac.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                           </select>
                         </div>
                         <div className="space-y-1">
@@ -371,6 +438,7 @@ export default function AdminDocumentsPage() {
                             disabled={!entry.filiere}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
+                            {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                           </select>
                         </div>
                         <div className="space-y-1">

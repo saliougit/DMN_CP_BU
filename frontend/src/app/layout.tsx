@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { CursorTrailWrapper } from "@/components/ui/cursor-trail-wrapper"
 import "./globals.css"
 
 const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] })
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <TooltipProvider>
+              <CursorTrailWrapper />
               {children}
               <Toaster richColors position="top-right" />
             </TooltipProvider>

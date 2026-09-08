@@ -27,6 +27,11 @@ class User(AbstractUser):
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name="membres",
     )
+    niveau = models.ForeignKey(
+        "classification.Niveau",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="membres",
+    )
 
     class Meta:
         db_table = "user"

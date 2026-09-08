@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Upload, FileText, X, Loader2, CheckCircle2, ArrowLeft } from "lucide-react"
+import { Upload, FileText, X, Loader2, CheckCircle2, ArrowLeft, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,61 @@ import { api } from "@/lib/api"
 import { toast } from "sonner"
 import type { Faculte, Niveau } from "@/types"
 
+// Format: PrenomNom__ANNEE__TYPE__CODE_FAC__NomFiliere.pdf
+const TYPE_MAP: Record<string, string> = {
+  master: "memoire_master",
+  licence: "memoire_licence",
+  doctorat: "these_doctorat",
+  these: "these_doctorat",
+  article: "article",
+  rapport: "rapport",
+}
+
+function parseFilename(
+  name: string,
+  facultes: Faculte[]
+): { titre?: string; type?: string; annee?: number; faculteId?: string; filiereId?: string; parsed: boolean } {
+  const base = name.replace(/\.pdf$/i, "")
+  const parts = base.split("__")
+  if (parts.length < 3) return { parsed: false }
+
+  const [auteurRaw, anneeRaw, typeRaw, codeFac, nomFiliere] = parts
+  const annee = Number(anneeRaw)
+  const type = TYPE_MAP[typeRaw?.toLowerCase?.() ?? ""]
+  if (!type || !annee || annee < 1900 || annee > 2100) return { parsed: false }
+
+  // Trouver faculté par code
+  const fac = codeFac
+    ? facultes.find((f) => f.code?.toLowerCase() === codeFac.toLowerCase()) ?? null
+    : null
+  const faculteId = fac?.id ?? ""
+
+  // Trouver filière par nom
+  const fil = nomFiliere && fac
+    ? fac.filieres.find((fi) => fi.nom.toLowerCase().replace(/\s/g, "") === nomFiliere.toLowerCase().replace(/\s/g, ""))
+    : null
+  const filiereId = fil?.id ?? ""
+
+  // Construire un titre proposé depuis le nom auteur + type
+  const typeLabel: Record<string, string> = {
+    memoire_master: "Mémoire de Master",
+    memoire_licence: "Mémoire de Licence",
+    these_doctorat: "Thèse de Doctorat",
+    article: "Article",
+    rapport: "Rapport",
+  }
+  const auteurPretty = auteurRaw.replace(/([a-z])([A-Z])/g, "$1 $2")
+
+  return {
+    parsed: true,
+    type,
+    annee,
+    faculteId,
+    filiereId,
+    titre: `${typeLabel[type] ?? type} de ${auteurPretty} (${annee})`,
+  }
+}
+
 export default function SoumettrePage() {
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
@@ -23,6 +78,7 @@ export default function SoumettrePage() {
   const [uploading, setUploading] = useState(false)
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
+  const [autoParsed, setAutoParsed] = useState(false)
 
   useEffect(() => {
     api.getFacultes().then(setFacultes).catch(() => {})
@@ -40,12 +96,39 @@ export default function SoumettrePage() {
     [facultes, form.faculteId]
   )
 
+  function handleFileSelect(f: File | null) {
+    if (!f) { setFile(null); setAutoParsed(false); return }
+    if (f.type !== "application/pdf") {
+      toast.error("Format accepté : PDF uniquement")
+      return
+    }
+    setFile(f)
+
+    // Tenter le parsing automatique du nom de fichier
+    if (facultes.length > 0) {
+      const parsed = parseFilename(f.name, facultes)
+      if (parsed.parsed) {
+        setForm((prev) => ({
+          ...prev,
+          ...(parsed.type ? { type: parsed.type } : {}),
+          ...(parsed.annee ? { annee: parsed.annee } : {}),
+          ...(parsed.faculteId ? { faculteId: parsed.faculteId, filiereId: parsed.filiereId ?? "" } : {}),
+          ...(parsed.titre && !prev.titre ? { titre: parsed.titre } : {}),
+        }))
+        setAutoParsed(true)
+        toast.success("Fichier analysé", {
+          description: "Les champs ont été pré-remplis depuis le nom de fichier.",
+        })
+      } else {
+        setAutoParsed(false)
+      }
+    }
+  }
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    const f = e.dataTransfer.files[0]
-    if (f?.type === "application/pdf") setFile(f)
-    else toast.error("Format accepté : PDF uniquement")
-  }, [])
+    handleFileSelect(e.dataTransfer.files[0] ?? null)
+  }, [facultes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -76,6 +159,8 @@ export default function SoumettrePage() {
     }
   }
 
+  const selectCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-6">
@@ -88,6 +173,13 @@ export default function SoumettrePage() {
           <p className="text-sm text-muted-foreground mt-1">
             Soumettez votre mémoire, thèse ou article. Un administrateur vérifiera et classera le document avant publication.
           </p>
+        </div>
+
+        {/* Format hint */}
+        <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground mb-1">Format de nom recommandé pour pré-remplissage automatique :</p>
+          <code className="text-primary text-[11px]">PrenomNom__ANNEE__TYPE__CODE_FAC__NomFiliere.pdf</code>
+          <p className="mt-1">Ex : <code className="text-primary">SaliouNiane__2026__master__FST__Informatique.pdf</code></p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -104,10 +196,17 @@ export default function SoumettrePage() {
               <div className="flex items-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="text-sm font-medium">{file.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{file.name}</p>
+                    {autoParsed && (
+                      <Badge className="text-[9px] gap-1 bg-primary/10 text-primary border-0 px-1.5 py-0">
+                        <Sparkles className="h-2.5 w-2.5" /> Auto-parsé
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} Mo</p>
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null) }}
+                <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); setAutoParsed(false) }}
                   className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                   <X className="h-4 w-4" />
                 </button>
@@ -119,8 +218,8 @@ export default function SoumettrePage() {
                 <p className="text-xs text-muted-foreground mt-1">ou cliquez pour parcourir</p>
               </>
             )}
-            <input id="submit-pdf" type="file" accept=".pdf" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
+            <input id="submit-pdf" type="file" accept=".pdf,application/pdf" className="hidden"
+              onChange={(e) => { handleFileSelect(e.target.files?.[0] ?? null) }} />
           </div>
 
           <Card>
@@ -134,7 +233,7 @@ export default function SoumettrePage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Type <span className="text-destructive">*</span></Label>
                   <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary">
+                    className={selectCls}>
                     <option value="memoire_licence">Mémoire de Licence</option>
                     <option value="memoire_master">Mémoire de Master</option>
                     <option value="these_doctorat">Thèse de Doctorat</option>
@@ -150,7 +249,7 @@ export default function SoumettrePage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Faculté <span className="text-destructive">*</span></Label>
                   <select value={form.faculteId} onChange={(e) => setForm((f) => ({ ...f, faculteId: e.target.value, filiereId: "" }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary" required>
+                    className={selectCls} required>
                     <option value="">Choisir</option>
                     {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                   </select>
@@ -159,21 +258,21 @@ export default function SoumettrePage() {
                   <Label className="text-xs">Filière <span className="text-destructive">*</span></Label>
                   <select value={form.filiereId} onChange={(e) => setForm((f) => ({ ...f, filiereId: e.target.value }))}
                     disabled={!form.faculteId}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary disabled:opacity-50" required>
+                    className={`${selectCls} disabled:opacity-50`} required>
                     <option value="">Choisir</option>
                     {filieres.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                   </select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="col-span-2 space-y-1.5">
                   <Label className="text-xs">Niveau <span className="text-destructive">*</span></Label>
                   <select value={form.niveauId} onChange={(e) => setForm((f) => ({ ...f, niveauId: e.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary" required>
+                    className={selectCls} required>
                     <option value="">Choisir</option>
                     {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                   </select>
                 </div>
                 <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs">Directeur de mémoire / encadreur (optionnel)</Label>
+                  <Label className="text-xs">Directeur de mémoire / Encadrant (optionnel)</Label>
                   <Input value={form.directeur} onChange={(e) => setForm((f) => ({ ...f, directeur: e.target.value }))}
                     placeholder="Prof. Nom et prénom" className="h-10 text-sm" />
                 </div>

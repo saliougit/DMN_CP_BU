@@ -182,7 +182,8 @@ MEILISEARCH_MASTER_KEY = config("MEILI_MASTER_KEY", default="")
 # Les mêmes variables (MINIO_ROOT_USER / MINIO_ROOT_PASSWORD) servent aussi
 # au container MinIO dans docker-compose — une seule paire à gérer dans .env
 
-MINIO_ENDPOINT   = config("MINIO_ENDPOINT",      default="localhost:9000")
-MINIO_ACCESS_KEY = config("MINIO_ROOT_USER",     default="minioadmin")
-MINIO_SECRET_KEY = config("MINIO_ROOT_PASSWORD", default="minioadmin")
-MINIO_BUCKET     = config("MINIO_BUCKET",        default="dmn-documents")
+MINIO_ENDPOINT        = config("MINIO_ENDPOINT",        default="localhost:9000")
+MINIO_PUBLIC_ENDPOINT = config("MINIO_PUBLIC_ENDPOINT", default="localhost/minio")
+MINIO_ACCESS_KEY      = config("MINIO_ROOT_USER",       default="minioadmin")
+MINIO_SECRET_KEY      = config("MINIO_ROOT_PASSWORD",   default="minioadmin")
+MINIO_BUCKET          = config("MINIO_BUCKET",          default="dmn-documents")

@@ -83,6 +83,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return Response({"url": doc.fichier.url})
 
 
+class PublicStatsView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from apps.accounts.models import User as UserModel
+        from apps.classification.models import Faculte
+        return Response({
+            "totalDocuments": Document.objects.filter(statut="approuve").count(),
+            "totalFacultes": Faculte.objects.count(),
+            "totalMembres": UserModel.objects.filter(role="membre").count(),
+        })
+
+
 class StatsView(generics.GenericAPIView):
     permission_classes = [IsAdminRole]
 

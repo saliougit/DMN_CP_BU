@@ -1,19 +1,12 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { BookOpen, FileText, GraduationCap, Users, ClipboardList, Archive, Lightbulb, Upload } from "lucide-react"
+import { BookOpen, FileText, GraduationCap, Users, ClipboardList, Archive, Lightbulb } from "lucide-react"
 import { SearchBar } from "@/components/search/search-bar"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/contexts/auth-context"
-
-const STATS = [
-  { icon: FileText, label: "Documents", value: "300+" },
-  { icon: BookOpen, label: "Facultés couvertes", value: "10+" },
-  { icon: Users, label: "Membres actifs", value: "300+" },
-]
+import { api } from "@/lib/api"
 
 const QUICK_SEARCHES = [
   "Économie islamique",
@@ -31,61 +24,45 @@ const RECENT_TYPES = [
   { label: "Articles de recherche", href: "/recherche?type=article", color: "bg-lime-50 text-lime-700 dark:bg-lime-950 dark:text-lime-300" },
 ]
 
-function GlowButton() {
-  const router = useRouter()
-  const { isAuthenticated } = useAuth()
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const [mouse, setMouse] = useState({ x: 0, y: 0, inside: false })
-
-  function handleMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
-    const rect = btnRef.current!.getBoundingClientRect()
-    setMouse({ x: e.clientX - rect.left, y: e.clientY - rect.top, inside: true })
-  }
-
-  function handleMouseLeave() {
-    setMouse((m) => ({ ...m, inside: false }))
-  }
-
-  function handleClick() {
-    if (isAuthenticated) {
-      router.push("/soumettre")
-    } else {
-      router.push("/connexion?from=/soumettre")
-    }
-  }
-
-  return (
-    <button
-      ref={btnRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
-      className="relative overflow-hidden inline-flex items-center gap-2.5 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all duration-200 hover:shadow-primary/30 hover:shadow-xl hover:scale-[1.03] active:scale-[0.98]"
-      style={{
-        background: mouse.inside
-          ? `radial-gradient(circle at ${mouse.x}px ${mouse.y}px, hsl(var(--primary) / 0.7) 0%, hsl(var(--primary)) 55%)`
-          : undefined,
-      }}
-    >
-      {mouse.inside && (
-        <span
-          className="pointer-events-none absolute rounded-full opacity-30 blur-xl transition-all duration-75"
-          style={{
-            width: 120,
-            height: 120,
-            left: mouse.x - 60,
-            top: mouse.y - 60,
-            background: "white",
-          }}
-        />
-      )}
-      <Upload className="relative h-4 w-4" />
-      <span className="relative">Déposer un document</span>
-    </button>
-  )
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLElement>(null)
+  const [inView, setInView] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); obs.disconnect() } },
+      { threshold }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [threshold])
+  return { ref, inView }
 }
 
+const anim = (show: boolean, delay = 0) => ({
+  style: { transitionDelay: `${delay}ms` },
+  className: `transition-all duration-700 ${show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`,
+})
+
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false)
+  const [stats, setStats] = useState({ totalDocuments: 0, totalFacultes: 0, totalMembres: 0 })
+  const { ref: statsRef, inView: statsInView } = useInView()
+  const { ref: commRef, inView: commInView } = useInView()
+  const { ref: typesRef, inView: typesInView } = useInView()
+
+  useEffect(() => {
+    setMounted(true)
+    api.getPublicStats().then(setStats).catch(() => {})
+  }, [])
+
+  const STATS = [
+    { icon: FileText, label: "Documents", value: stats.totalDocuments || "—" },
+    { icon: BookOpen, label: "Facultés couvertes", value: stats.totalFacultes || "—" },
+    { icon: Users, label: "Membres actifs", value: stats.totalMembres || "—" },
+  ]
+
   return (
     <>
       {/* Hero */}
@@ -96,9 +73,8 @@ export default function HomePage() {
         />
 
         {/* Logo avec animation au survol */}
-        <div className="mb-6 flex flex-col items-center gap-3">
+        <div {...anim(mounted, 0)} className={`mb-6 flex flex-col items-center gap-3 ${anim(mounted, 0).className}`} style={anim(mounted, 0).style}>
           <div className="group relative h-40 w-40 cursor-pointer">
-            {/* Halo pulsant au survol */}
             <span className="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-xl transition-all duration-500 group-hover:opacity-100 group-hover:scale-125" />
             <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 transition-all duration-500 group-hover:ring-primary/60 group-hover:ring-8" />
             <div className="relative h-full w-full overflow-hidden rounded-full bg-white shadow-xl transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-primary/30 dark:bg-white p-1">
@@ -116,23 +92,31 @@ export default function HomePage() {
           </Badge>
         </div>
 
-        <h1 className="mb-3 text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+        <h1
+          className={`mb-3 text-center text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl ${anim(mounted, 100).className}`}
+          style={anim(mounted, 100).style}
+        >
           Bibliothèque Numérique
         </h1>
-        <p className="mb-8 max-w-xl text-center text-muted-foreground text-sm sm:text-base">
+
+        <p
+          className={`mb-8 max-w-xl text-center text-muted-foreground text-sm sm:text-base ${anim(mounted, 180).className}`}
+          style={anim(mounted, 180).style}
+        >
           Accédez à l&apos;ensemble des travaux académiques des membres — mémoires, thèses et articles — classés par faculté, niveau et année.
         </p>
 
-        <div className="w-full max-w-2xl">
+        <div
+          className={`w-full max-w-2xl ${anim(mounted, 260).className}`}
+          style={anim(mounted, 260).style}
+        >
           <SearchBar size="hero" autoFocus />
         </div>
 
-        <div className="mt-6">
-          <GlowButton />
-        </div>
-
-        {/* Recherches rapides */}
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <div
+          className={`mt-5 flex flex-wrap justify-center gap-2 ${anim(mounted, 340).className}`}
+          style={anim(mounted, 340).style}
+        >
           <span className="text-xs text-muted-foreground self-center">Populaire :</span>
           {QUICK_SEARCHES.map((term) => (
             <Link
@@ -146,11 +130,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="border-y border-border/60 bg-muted/30 py-10 px-4">
+      {/* Stats réelles */}
+      <section
+        ref={statsRef as React.RefObject<HTMLElement>}
+        className="border-y border-border/60 bg-muted/30 py-10 px-4"
+      >
         <div className="mx-auto grid max-w-2xl grid-cols-3 gap-6 justify-items-center">
-          {STATS.map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex flex-col items-center gap-2 text-center">
+          {STATS.map(({ icon: Icon, label, value }, i) => (
+            <div
+              key={label}
+              className={`flex flex-col items-center gap-2 text-center transition-all duration-700 ${statsInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+              style={{ transitionDelay: `${i * 120}ms` }}
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                 <Icon className="h-5 w-5 text-primary" />
               </div>
@@ -161,9 +152,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Présentation de la Commission Pédagogique */}
-      <section className="mx-auto max-w-4xl px-4 py-14">
-        <div className="mb-8 text-center">
+      {/* Commission Pédagogique */}
+      <section
+        ref={commRef as React.RefObject<HTMLElement>}
+        className="mx-auto max-w-4xl px-4 py-14"
+      >
+        <div
+          className={`mb-8 text-center transition-all duration-700 ${commInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
           <span className="inline-block mb-3 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary uppercase tracking-widest">
             Commission Pédagogique
           </span>
@@ -178,50 +174,43 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <ClipboardList className="h-5 w-5 text-primary" />
+          {[
+            { icon: ClipboardList, title: "Analyse des besoins", body: "Identifier et évaluer les besoins de formation des membres afin d'orienter les programmes pédagogiques du Daara." },
+            { icon: Archive, title: "Archivage des productions", body: "Collecter et préserver les productions intellectuelles des membres — mémoires, thèses et articles — au sein de cette bibliothèque numérique." },
+            { icon: Lightbulb, title: "Méthodes innovantes", body: "Promouvoir des approches pédagogiques novatrices et organiser des rencontres scientifiques pour enrichir la pratique académique au sein du Daara." },
+          ].map(({ icon: Icon, title, body }, i) => (
+            <div
+              key={title}
+              className={`flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 transition-all duration-700 hover:shadow-md hover:-translate-y-0.5 ${commInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+              style={{ transitionDelay: `${100 + i * 120}ms` }}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>
-            <h3 className="text-sm font-semibold text-foreground">Analyse des besoins</h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Identifier et évaluer les besoins de formation des membres afin d&apos;orienter les programmes
-              pédagogiques du Daara.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <Archive className="h-5 w-5 text-primary" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">Archivage des productions</h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Collecter et préserver les productions intellectuelles des membres — mémoires, thèses et
-              articles — au sein de cette bibliothèque numérique.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <Lightbulb className="h-5 w-5 text-primary" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">Méthodes innovantes</h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Promouvoir des approches pédagogiques novatrices et organiser des rencontres scientifiques
-              pour enrichir la pratique académique au sein du Daara.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* Types de documents */}
-      <section className="mx-auto max-w-4xl px-4 py-12">
-        <h2 className="mb-6 text-center text-lg font-semibold text-foreground">Parcourir par type</h2>
+      <section
+        ref={typesRef as React.RefObject<HTMLElement>}
+        className="mx-auto max-w-4xl px-4 py-12"
+      >
+        <h2
+          className={`mb-6 text-center text-lg font-semibold text-foreground transition-all duration-700 ${typesInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+        >
+          Parcourir par type
+        </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {RECENT_TYPES.map(({ label, href, color }) => (
+          {RECENT_TYPES.map(({ label, href, color }, i) => (
             <Link
               key={label}
               href={href}
-              className={`flex flex-col items-center gap-2 rounded-2xl p-5 text-center text-sm font-medium transition-all hover:scale-[1.02] hover:shadow-md ${color}`}
+              className={`flex flex-col items-center gap-2 rounded-2xl p-5 text-center text-sm font-medium transition-all duration-700 hover:scale-[1.03] hover:shadow-md ${color} ${typesInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+              style={{ transitionDelay: `${i * 80}ms` }}
             >
               <GraduationCap className="h-7 w-7" />
               {label}

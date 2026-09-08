@@ -7,7 +7,7 @@ import { pdfjs, Document, Page } from "react-pdf"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
 
-const WORKER_URL = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+const WORKER_URL = "/pdf.worker.min.mjs"
 if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
   pdfjs.GlobalWorkerOptions.workerSrc = WORKER_URL
 }
@@ -26,7 +26,9 @@ export function PdfViewer({ fileUrl, pages: _pages, page, onPageChange, classNam
   const [workerReady, setWorkerReady] = useState(false)
 
   useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = WORKER_URL
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = WORKER_URL
+    }
     setWorkerReady(true)
   }, [])
 
@@ -111,6 +113,7 @@ export function PdfViewer({ fileUrl, pages: _pages, page, onPageChange, classNam
           <div className="w-full max-w-4xl">
             <Document
               file={fileUrl}
+              options={{ disableRange: true, withCredentials: false }}
               onLoadSuccess={onLoadSuccess}
               onLoadError={onLoadError}
               loading={

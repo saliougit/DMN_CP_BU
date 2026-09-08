@@ -5,12 +5,17 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     faculte_nom = serializers.CharField(source="faculte.nom", allow_null=True, read_only=True)
     filiere_nom = serializers.CharField(source="filiere.nom", allow_null=True, read_only=True)
+    niveau_nom  = serializers.CharField(source="niveau.nom",  allow_null=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name",
-                  "role", "telephone", "faculte", "filiere", "faculte_nom", "filiere_nom",
-                  "date_adhesion", "photo", "date_joined"]
+        fields = [
+            "id", "username", "email", "first_name", "last_name",
+            "role", "telephone",
+            "faculte", "filiere", "niveau",
+            "faculte_nom", "filiere_nom", "niveau_nom",
+            "date_adhesion", "photo", "date_joined",
+        ]
         read_only_fields = ["id", "role", "date_joined"]
 
 
@@ -20,8 +25,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "first_name", "last_name",
-                  "password", "password_confirm", "telephone"]
+        fields = [
+            "username", "email", "first_name", "last_name",
+            "password", "password_confirm", "telephone",
+            "faculte", "filiere", "niveau",
+        ]
+        extra_kwargs = {
+            "faculte": {"required": False, "allow_null": True},
+            "filiere": {"required": False, "allow_null": True},
+            "niveau":  {"required": False, "allow_null": True},
+        }
 
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("password_confirm"):

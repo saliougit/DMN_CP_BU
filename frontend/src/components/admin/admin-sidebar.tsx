@@ -57,7 +57,7 @@ export function AdminSidebar() {
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="px-4 py-4 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5">
-        <Link href="/" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+        <Link href="/gestion" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
           <div className="relative h-8 w-8 overflow-hidden rounded-full ring-2 ring-primary/30 flex-shrink-0 bg-white dark:bg-white p-0.5">
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" />
           </div>

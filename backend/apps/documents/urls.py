@@ -8,4 +8,5 @@ router.register("documents", views.DocumentViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path("stats/", views.StatsView.as_view(), name="stats"),
+    path("public-stats/", views.PublicStatsView.as_view(), name="public-stats"),
 ]

@@ -45,9 +45,14 @@ export function PublicNavbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="gap-2" onClick={handleSoumettre}>
-            <Upload className="h-4 w-4" /> Déposer un document
-          </Button>
+          <button
+            onClick={handleSoumettre}
+            className="relative inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-primary/40 hover:shadow-lg hover:scale-[1.04] active:scale-[0.97]"
+          >
+            <span className="absolute inset-0 rounded-full animate-ping bg-primary/30 opacity-0 group-hover:opacity-100" />
+            <Upload className="h-3.5 w-3.5" />
+            Déposer un document
+          </button>
         </nav>
 
         <div className="flex items-center gap-2">

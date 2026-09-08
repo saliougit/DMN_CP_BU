@@ -19,11 +19,24 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from "@/components/ui/sheet"
-import { MOCK_DOCUMENTS, MOCK_FACULTES, MOCK_NIVEAUX } from "@/lib/mock-data"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { PdfViewer } from "@/components/documents/pdf-viewer"
-import type { Document } from "@/types"
+import { api } from "@/lib/api"
+import type { Document, Faculte, Niveau } from "@/types"
 import { toast } from "sonner"
+
+function formatDatetime(iso: string | undefined) {
+  if (!iso) return "—"
+  try {
+    const d = new Date(iso)
+    const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
+    const h = String(d.getHours()).padStart(2, "0")
+    const m = String(d.getMinutes()).padStart(2, "0")
+    return `le ${date} à ${h}h${m}`
+  } catch {
+    return iso
+  }
+}
 
 export default function AdminDocumentDetailPage() {
   const params = useParams<{ id: string }>()
@@ -32,13 +45,19 @@ export default function AdminDocumentDetailPage() {
   const [pdfPage, setPdfPage] = useState(1)
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Document>>({})
+  const [editDirecteur, setEditDirecteur] = useState({ directeurMemoire: "", encadrant: "" })
   const [saving, setSaving] = useState(false)
   const [newKeyword, setNewKeyword] = useState("")
+  const [facultes, setFacultes] = useState<Faculte[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
 
   useEffect(() => {
-    const found = MOCK_DOCUMENTS.find((d) => d.id === params.id)
-    setDoc(found ?? null)
-    setLoading(false)
+    api.getDocument(params.id)
+      .then(setDoc)
+      .catch(() => setDoc(null))
+      .finally(() => setLoading(false))
+    api.getFacultes().then(setFacultes).catch(() => {})
+    api.getNiveaux().then(setNiveaux).catch(() => {})
   }, [params.id])
 
   function openEdit() {
@@ -46,9 +65,11 @@ export default function AdminDocumentDetailPage() {
     setEditForm({
       titre: doc.titre, auteur: doc.auteur, type: doc.type,
       faculte: doc.faculte, filiere: doc.filiere, niveau: doc.niveau,
-      annee: doc.annee, directeur: doc.directeur, resume: doc.resume,
+      annee: doc.annee, resume: doc.resume,
       motsCles: [...doc.motsCles], pages: doc.pages,
     })
+    const parts = (doc.directeur ?? "").split(" / ")
+    setEditDirecteur({ directeurMemoire: parts[0]?.trim() ?? "", encadrant: parts[1]?.trim() ?? "" })
     setNewKeyword("")
     setEditOpen(true)
   }
@@ -70,18 +91,51 @@ export default function AdminDocumentDetailPage() {
     updateForm("motsCles", mots)
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!doc || !editForm.titre || !editForm.auteur) {
       toast.error("Titre et auteur sont obligatoires")
       return
     }
     setSaving(true)
-    setTimeout(() => {
-      setSaving(false)
-      setDoc((prev) => prev ? { ...prev, ...editForm } : prev)
+    try {
+      // Trouver les IDs à partir des noms
+      const facObj = facultes.find((f) => f.nom === editForm.faculte)
+      const filObj = facObj?.filieres.find((fi) => fi.nom === editForm.filiere)
+      const nivObj = niveaux.find((n) => n.nom === editForm.niveau)
+
+      const payload: Record<string, unknown> = {
+        titre: editForm.titre,
+        auteur: editForm.auteur,
+        type: editForm.type,
+        annee: editForm.annee,
+        directeur: [editDirecteur.directeurMemoire, editDirecteur.encadrant].filter(Boolean).join(" / "),
+        resume: editForm.resume ?? "",
+        mots_cles: editForm.motsCles ?? [],
+        pages: editForm.pages ?? null,
+      }
+      if (facObj) payload.faculte = facObj.id
+      if (filObj) payload.filiere = filObj.id
+      if (nivObj) payload.niveau = nivObj.id
+
+      const updated = await api.updateDocument(doc.id, payload)
+      setDoc(updated)
       setEditOpen(false)
       toast.success("Document mis à jour")
-    }, 500)
+    } catch {
+      toast.error("Erreur lors de la mise à jour")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDownload() {
+    if (!doc) return
+    try {
+      const url = await api.getDownloadUrl(doc.id)
+      window.open(url, "_blank")
+    } catch {
+      toast.error("Impossible de télécharger le fichier")
+    }
   }
 
   if (loading) {
@@ -115,7 +169,7 @@ export default function AdminDocumentDetailPage() {
 
   const StatusIcon = statusInfo.icon
 
-  const filieresList = MOCK_FACULTES.find((f) => f.nom === editForm.faculte)?.filieres ?? []
+  const filieresList = facultes.find((f) => f.nom === editForm.faculte)?.filieres ?? []
 
   return (
     <div className="space-y-4">
@@ -154,10 +208,15 @@ export default function AdminDocumentDetailPage() {
                 <MetaRow icon={GraduationCap} label="Niveau" value={doc.niveau} />
                 <MetaRow icon={BookOpen} label="Faculté" value={doc.faculte} />
                 {doc.filiere && <MetaRow icon={BookOpen} label="Filière" value={doc.filiere} />}
-                {doc.directeur && <MetaRow icon={User} label="Directeur" value={doc.directeur} />}
+                {doc.directeur && (() => {
+                  const parts = doc.directeur!.split(" / ")
+                  return <>
+                    <MetaRow icon={User} label="Directeur de mémoire" value={parts[0]?.trim() ?? doc.directeur!} />
+                    {parts[1] && <MetaRow icon={User} label="Encadrant" value={parts[1].trim()} />}
+                  </>
+                })()}
                 <MetaRow icon={Calendar} label="Année" value={String(doc.annee)} />
-                <MetaRow icon={User} label="Soumis par" value={doc.soumisParId} />
-                <MetaRow icon={Calendar} label="Date de soumission" value={doc.soumisLe} />
+                <MetaRow icon={Calendar} label="Soumis" value={formatDatetime(doc.soumisLe)} />
               </div>
 
               {doc.motsCles.length > 0 && (
@@ -178,7 +237,7 @@ export default function AdminDocumentDetailPage() {
 
               <div>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Résumé</p>
-                <p className="text-xs leading-relaxed text-foreground/80">{doc.resume}</p>
+                <p className="text-xs leading-relaxed text-foreground/80">{doc.resume || "—"}</p>
               </div>
             </div>
 
@@ -188,7 +247,7 @@ export default function AdminDocumentDetailPage() {
                 <Button className="flex-1 gap-2 bg-primary hover:bg-primary/90 h-9 text-sm" onClick={openEdit}>
                   <Pencil className="h-4 w-4" /> Modifier
                 </Button>
-                <Button variant="outline" className="gap-2 h-9 text-sm">
+                <Button variant="outline" className="gap-2 h-9 text-sm" onClick={handleDownload}>
                   <Download className="h-4 w-4" /> PDF
                 </Button>
               </div>
@@ -249,7 +308,7 @@ export default function AdminDocumentDetailPage() {
                     onChange={(e) => updateForm("faculte", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-primary">
                     <option value="">Choisir</option>
-                    {MOCK_FACULTES.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                    {facultes.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -268,7 +327,7 @@ export default function AdminDocumentDetailPage() {
                     onChange={(e) => updateForm("niveau", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-primary">
                     <option value="">Choisir</option>
-                    {MOCK_NIVEAUX.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
+                    {niveaux.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -277,9 +336,22 @@ export default function AdminDocumentDetailPage() {
                     onChange={(e) => updateForm("annee", Number(e.target.value))}
                     className="h-9 text-sm" />
                 </div>
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs">Directeur (optionnel)</Label>
-                  <Input value={editForm.directeur ?? ""} onChange={(e) => updateForm("directeur", e.target.value)}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nombre de pages</Label>
+                  <Input type="number" value={editForm.pages ?? ""}
+                    onChange={(e) => updateForm("pages", e.target.value ? Number(e.target.value) : null)}
+                    className="h-9 text-sm" placeholder="—" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Directeur de mémoire</Label>
+                  <Input value={editDirecteur.directeurMemoire}
+                    onChange={(e) => setEditDirecteur((p) => ({ ...p, directeurMemoire: e.target.value }))}
+                    className="h-9 text-sm" placeholder="Prof. Nom Prénom" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Encadrant</Label>
+                  <Input value={editDirecteur.encadrant}
+                    onChange={(e) => setEditDirecteur((p) => ({ ...p, encadrant: e.target.value }))}
                     className="h-9 text-sm" placeholder="Prof. Nom Prénom" />
                 </div>
                 <div className="col-span-2 space-y-1.5">

@@ -46,7 +46,7 @@ export default function InscriptionPage() {
   }
 
   const filieresDispo = useMemo(
-    () => facultes.find((f) => f.nom === form.faculte)?.filieres ?? [],
+    () => facultes.find((f) => f.id === form.faculte)?.filieres ?? [],
     [facultes, form.faculte]
   )
 
@@ -68,7 +68,7 @@ export default function InscriptionPage() {
       toast.success("Compte créé avec succès !", {
         description: "Bienvenue sur DMN-BU. Vous pouvez maintenant déposer vos documents.",
       })
-      router.push("/profil")
+      router.push("/")
     } else {
       toast.error("Erreur d'inscription", {
         description: result.error ?? "Une erreur est survenue",
@@ -138,7 +138,7 @@ export default function InscriptionPage() {
                   <select value={form.faculte} onChange={(e) => setField("faculte", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir une faculté</option>
-                    {facultes.map((f) => (<option key={f.id} value={f.nom}>{f.nom}</option>))}
+                    {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -147,7 +147,7 @@ export default function InscriptionPage() {
                     disabled={!form.faculte}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors disabled:opacity-50" required>
                     <option value="">Choisir une filière</option>
-                    {filieresDispo.map((fi) => (<option key={fi.id} value={fi.nom}>{fi.nom}</option>))}
+                    {filieresDispo.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -155,7 +155,7 @@ export default function InscriptionPage() {
                   <select value={form.niveau} onChange={(e) => setField("niveau", e.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir un niveau</option>
-                    {niveaux.map((n) => (<option key={n.id} value={n.nom}>{n.nom}</option>))}
+                    {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                   </select>
                 </div>
               </>

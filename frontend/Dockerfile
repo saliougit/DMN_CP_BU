@@ -7,6 +7,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# react-pdf bundles its own PDF.js version; the worker must match it exactly.
+RUN cp node_modules/react-pdf/node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs
 # NEXT_PUBLIC_* sont compilés dans le bundle — ils doivent être définis AU BUILD,
 # pas à l'exécution. On les passe via docker-compose build.args.
 ARG NEXT_PUBLIC_API_URL=http://localhost/api

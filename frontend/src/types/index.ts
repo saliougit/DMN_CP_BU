@@ -37,7 +37,10 @@ export interface Document {
   soumisLe: string
   approuveLe?: string
   approuveParId?: string
+  rejeteLe?: string
   motifRejet?: string
+  nbTelechargements?: number
+  nbConsultations?: number
 }
 
 export interface Faculte {
@@ -77,10 +80,13 @@ export interface SearchFilters {
 }
 
 export interface DashboardStats {
-  totalDocuments: number
+  totalDocuments: number      // compat — identique à totalApprouves
+  totalApprouves: number
   soumissionsEnAttente: number
+  totalRejetes: number
   totalMembres: number
   documentsApprouvesCeMois: number
+  totalTelechargements: number
   topFacultes: { nom: string; count: number }[]
   documentsParAnnee: { annee: number; count: number }[]
 }

@@ -76,7 +76,7 @@ function publicMinioUrl(url: string | undefined): string | undefined {
   return url
     .replace(/^http:\/\/storage:9000\//, "http://localhost/minio/")
     .replace(/^http:\/\/minio:9000\//, "http://localhost/minio/")
-    .replace(/^https:\/\/localhost\//, "http://localhost/")  // custom_domain génère https par défaut
+    .replace(/^https:\/\/localhost\//, "http://localhost/")
 }
 
 function mapDocument(d: Record<string, unknown>): Document {
@@ -95,11 +95,14 @@ function mapDocument(d: Record<string, unknown>): Document {
     motsCles:      (d.mots_cles  as string[]) ?? [],
     fichierUrl:    publicMinioUrl((d.fichier as string) || undefined),
     pages:         (d.pages      as number) || undefined,
-    soumisParId:   (d.soumis_par as string) ?? "",
-    soumisLe:      d.date_soumission as string,
-    approuveLe:    (d.date_approbation as string) || undefined,
-    approuveParId: (d.approuve_par    as string) || undefined,
-    motifRejet:    (d.raison_rejet    as string) || undefined,
+    soumisParId:        (d.soumis_par       as string) ?? "",
+    soumisLe:           d.date_soumission   as string,
+    approuveLe:         (d.date_approbation as string) || undefined,
+    approuveParId:      (d.approuve_par     as string) || undefined,
+    rejeteLe:           (d.date_rejet       as string) || undefined,
+    motifRejet:         (d.raison_rejet     as string) || undefined,
+    nbTelechargements:  (d.nb_telechargements as number) ?? 0,
+    nbConsultations:    (d.nb_consultations   as number) ?? 0,
   }
 }
 
@@ -242,6 +245,10 @@ export const api = {
   getMesDocuments: (): Promise<Document[]> =>
     fetchApi<{ results: Record<string, unknown>[]; count: number }>("/documents/?mes=true", {}, true)
       .then((r) => r.results.map(mapDocument)),
+
+  // Tracking téléchargement — retourne l'URL MinIO du fichier
+  downloadDocument: (id: string): Promise<{ url: string }> =>
+    fetchApi<{ url: string }>(`/documents/${id}/download/`),
 
   // Profil — mise à jour
   updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; niveau: string; telephone: string }>): Promise<User> =>

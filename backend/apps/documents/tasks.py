@@ -45,6 +45,118 @@ def _send(subject: str, template: str, context: dict, recipient: str):
     conn.close()
 
 
+def _get_admin_recipients(flag: str):
+    """Retourne les emails des admins ayant le flag de notification activé."""
+    from apps.accounts.models import User
+    return list(
+        User.objects.filter(role="admin", **{flag: True})
+        .exclude(email="")
+        .values_list("email", flat=True)
+    )
+
+
+def _send_to_many(subject: str, template: str, context: dict, recipients: list):
+    for email in recipients:
+        try:
+            _send(subject, template, context, email)
+        except Exception:
+            pass
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def notifier_admins_soumission(self, doc_id: str):
+    from .models import Document
+    try:
+        doc = Document.objects.select_related("soumis_par", "faculte").get(id=doc_id)
+    except Document.DoesNotExist:
+        return
+    recipients = _get_admin_recipients("notify_soumission")
+    if not recipients:
+        return
+    auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
+    try:
+        _send_to_many(
+            subject=f"[DMN-BU] Nouvelle soumission — {doc.titre}",
+            template="emails/admin_soumission.html",
+            context={"doc": doc, "auteur": auteur},
+            recipients=recipients,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def notifier_admins_approbation(self, doc_id: str):
+    from .models import Document
+    try:
+        doc = Document.objects.select_related("soumis_par").get(id=doc_id)
+    except Document.DoesNotExist:
+        return
+    recipients = _get_admin_recipients("notify_approbation")
+    if not recipients:
+        return
+    auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
+    try:
+        _send_to_many(
+            subject=f"[DMN-BU] Document approuvé — {doc.titre}",
+            template="emails/admin_approbation.html",
+            context={"doc": doc, "auteur": auteur},
+            recipients=recipients,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def notifier_admins_rejet(self, doc_id: str):
+    from .models import Document
+    try:
+        doc = Document.objects.select_related("soumis_par").get(id=doc_id)
+    except Document.DoesNotExist:
+        return
+    recipients = _get_admin_recipients("notify_rejet")
+    if not recipients:
+        return
+    auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
+    try:
+        _send_to_many(
+            subject=f"[DMN-BU] Document rejeté — {doc.titre}",
+            template="emails/admin_rejet.html",
+            context={"doc": doc, "auteur": auteur},
+            recipients=recipients,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def notifier_admins_compte(self, user_id: str):
+    from apps.accounts.models import User
+    try:
+        membre = User.objects.select_related("faculte", "filiere", "niveau").get(id=user_id)
+    except User.DoesNotExist:
+        return
+    recipients = _get_admin_recipients("notify_compte")
+    if not recipients:
+        return
+    nom = membre.get_full_name() or membre.username
+    try:
+        _send_to_many(
+            subject=f"[DMN-BU] Nouveau membre — {nom}",
+            template="emails/admin_nouveau_compte.html",
+            context={
+                "membre": nom,
+                "email": membre.email,
+                "faculte": membre.faculte,
+                "filiere": membre.filiere,
+                "niveau": membre.niveau,
+            },
+            recipients=recipients,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
 @shared_task(queue="default", bind=True, max_retries=3)
 def notifier_approbation(self, doc_id: str):
     from .models import Document

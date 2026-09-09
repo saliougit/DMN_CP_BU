@@ -1,5 +1,5 @@
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, F
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -32,7 +32,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return DocumentDetailSerializer
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
+        if self.action in ("list", "retrieve", "download"):
             return [permissions.AllowAny()]
         if self.action == "create":
             return [permissions.IsAuthenticated()]
@@ -51,6 +51,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.is_authenticated and mes:
             qs = qs.filter(soumis_par=user)
         return qs
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        # Incrément atomique — pas de race condition même sous charge
+        Document.objects.filter(pk=kwargs["pk"]).update(nb_consultations=F("nb_consultations") + 1)
+        return response
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -72,7 +78,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         doc = self.get_object()
         doc.statut = StatutDocument.REJETE
         doc.raison_rejet = request.data.get("raison", "")
-        doc.save(update_fields=["statut", "raison_rejet"])
+        doc.date_rejet = timezone.now()
+        doc.save(update_fields=["statut", "raison_rejet", "date_rejet"])
         return Response({"statut": "rejete"})
 
     @action(detail=True, methods=["get"])
@@ -80,6 +87,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         doc = self.get_object()
         if not doc.fichier:
             return Response({"detail": "Aucun fichier."}, status=status.HTTP_404_NOT_FOUND)
+        Document.objects.filter(pk=doc.pk).update(nb_telechargements=F("nb_telechargements") + 1)
         return Response({"url": doc.fichier.url})
 
 
@@ -102,10 +110,13 @@ class StatsView(generics.GenericAPIView):
     def get(self, request):
         from apps.accounts.models import User as UserModel
         debut_mois = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        from django.db.models import Sum
         approuves = Document.objects.filter(statut="approuve").count()
         en_attente = Document.objects.filter(statut="en_attente").count()
+        rejetes = Document.objects.filter(statut="rejete").count()
         approuves_mois = Document.objects.filter(statut="approuve", date_approbation__gte=debut_mois).count()
         total_membres = UserModel.objects.filter(role="membre").count()
+        total_telechargements = Document.objects.aggregate(t=Sum("nb_telechargements"))["t"] or 0
         top_facultes = (
             Document.objects.filter(statut="approuve")
             .values("faculte__nom")
@@ -119,10 +130,13 @@ class StatsView(generics.GenericAPIView):
             .order_by("annee")
         )
         return Response({
-            "totalDocuments": approuves,
+            "totalDocuments": approuves,   # compat — identique à totalApprouves
+            "totalApprouves": approuves,
             "soumissionsEnAttente": en_attente,
+            "totalRejetes": rejetes,
             "totalMembres": total_membres,
             "documentsApprouvesCeMois": approuves_mois,
+            "totalTelechargements": total_telechargements,
             "topFacultes": [{"nom": r["faculte__nom"] or "", "count": r["count"]} for r in top_facultes],
             "documentsParAnnee": [{"annee": r["annee"], "count": r["count"]} for r in docs_par_annee],
         })

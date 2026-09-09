@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Download, FileText, Calendar, User,
-  GraduationCap, BookOpen,
+  GraduationCap, BookOpen, Eye,
   CheckCircle2, XCircle, Clock, Pencil, X, Loader2, Plus
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -217,6 +217,20 @@ export default function AdminDocumentDetailPage() {
                 })()}
                 <MetaRow icon={Calendar} label="Année" value={String(doc.annee)} />
                 <MetaRow icon={Calendar} label="Soumis" value={formatDatetime(doc.soumisLe)} />
+              </div>
+
+              <Separator />
+
+              {/* Stats */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>{(doc.nbConsultations ?? 0).toLocaleString("fr-FR")} vue{(doc.nbConsultations ?? 0) > 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{(doc.nbTelechargements ?? 0).toLocaleString("fr-FR")} téléchargement{(doc.nbTelechargements ?? 0) > 1 ? "s" : ""}</span>
+                </div>
               </div>
 
               {doc.motsCles.length > 0 && (

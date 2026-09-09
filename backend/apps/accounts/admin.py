@@ -12,6 +12,10 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = BaseUserAdmin.fieldsets + (
         ("DMN-BU", {"fields": ("role", "telephone", "photo", "bio", "faculte", "filiere", "date_adhesion")}),
+        ("Notifications (admins)", {
+            "fields": ("notify_soumission", "notify_compte", "notify_approbation", "notify_rejet"),
+            "description": "Ces préférences ne s'appliquent qu'aux comptes Administrateur.",
+        }),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ("DMN-BU", {"fields": ("role", "email", "first_name", "last_name", "telephone")}),

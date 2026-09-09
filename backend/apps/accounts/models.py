@@ -17,6 +17,12 @@ class User(AbstractUser):
     bio           = models.TextField(blank=True)
     date_adhesion = models.DateField(null=True, blank=True)
 
+    # Préférences de notification — uniquement pour les admins
+    notify_soumission  = models.BooleanField(default=True, help_text="Recevoir un email à chaque nouvelle soumission de document")
+    notify_compte      = models.BooleanField(default=True, help_text="Recevoir un email à chaque création de compte membre")
+    notify_approbation = models.BooleanField(default=True, help_text="Recevoir un email quand un document est approuvé")
+    notify_rejet       = models.BooleanField(default=True, help_text="Recevoir un email quand un document est rejeté")
+
     faculte = models.ForeignKey(
         "classification.Faculte",
         on_delete=models.SET_NULL, null=True, blank=True,

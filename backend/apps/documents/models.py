@@ -56,7 +56,11 @@ class Document(models.Model):
 
     date_soumission   = models.DateTimeField(auto_now_add=True)
     date_approbation  = models.DateTimeField(null=True, blank=True)
+    date_rejet        = models.DateTimeField(null=True, blank=True)
     date_modification = models.DateTimeField(auto_now=True)
+
+    nb_telechargements = models.PositiveIntegerField(default=0)
+    nb_consultations   = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "document"

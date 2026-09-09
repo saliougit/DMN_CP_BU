@@ -29,11 +29,12 @@ export default function AdminDashboard() {
   }, [])
 
   const stats = useMemo(() => ({
-    totalApprouves: statsData?.totalDocuments ?? 0,
-    enAttente: statsData?.soumissionsEnAttente ?? 0,
-    rejetes: 0,
-    approuvesCeMois: statsData?.documentsApprouvesCeMois ?? 0,
-    totalMembres: statsData?.totalMembres ?? 0,
+    totalApprouves:       statsData?.totalApprouves ?? statsData?.totalDocuments ?? 0,
+    enAttente:            statsData?.soumissionsEnAttente ?? 0,
+    rejetes:              statsData?.totalRejetes ?? 0,
+    approuvesCeMois:      statsData?.documentsApprouvesCeMois ?? 0,
+    totalMembres:         statsData?.totalMembres ?? 0,
+    totalTelechargements: statsData?.totalTelechargements ?? 0,
     topFacultes: (statsData?.topFacultes ?? []).map((f) => ({
       nom: f.nom,
       count: f.count,
@@ -86,8 +87,8 @@ export default function AdminDashboard() {
     },
     {
       title: "Téléchargements",
-      value: "—",
-      change: "Statistiques à venir",
+      value: stats.totalTelechargements.toLocaleString("fr-FR"),
+      change: "Total tous documents",
       icon: TrendingUp,
       color: "text-purple-600",
       bg: "bg-purple-50 dark:bg-purple-950",

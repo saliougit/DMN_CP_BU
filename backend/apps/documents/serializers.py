@@ -16,7 +16,9 @@ class DocumentListSerializer(serializers.ModelSerializer):
             "filiere", "filiere_nom",
             "niveau",  "niveau_nom",
             "annee", "resume", "mots_cles", "directeur", "pages",
-            "fichier", "date_soumission", "soumis_par", "soumis_par_nom",
+            "fichier", "date_soumission", "date_approbation", "date_rejet",
+            "raison_rejet", "soumis_par", "soumis_par_nom",
+            "nb_telechargements", "nb_consultations",
         ]
 
     def get_soumis_par_nom(self, obj):

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Download, FileText, Calendar, User,
-  GraduationCap, BookOpen
+  GraduationCap, BookOpen, Loader2, Eye, TrendingDown
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,26 @@ export default function DocumentDetailPage() {
   const [doc, setDoc] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [pdfPage, setPdfPage] = useState(1)
+  const [downloading, setDownloading] = useState(false)
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null)
+
+  async function handleDownload() {
+    if (!doc?.fichierUrl || downloading) return
+    setDownloading(true)
+    try {
+      const { url: fileUrl } = await api.downloadDocument(doc.id)
+      const res  = await fetch(fileUrl)
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = downloadLinkRef.current!
+      a.href     = url
+      a.download = `${doc.titre}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     api.getDocument(params.id)
@@ -111,6 +131,20 @@ export default function DocumentDetailPage() {
 
               <Separator />
 
+              {/* Stats consultation / téléchargement */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>{(doc.nbConsultations ?? 0).toLocaleString("fr-FR")} vue{(doc.nbConsultations ?? 0) > 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{(doc.nbTelechargements ?? 0).toLocaleString("fr-FR")} téléchargement{(doc.nbTelechargements ?? 0) > 1 ? "s" : ""}</span>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Résumé */}
               <div>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Résumé</p>
@@ -120,8 +154,16 @@ export default function DocumentDetailPage() {
 
             {/* Actions toujours visibles en bas */}
             <div className="flex-shrink-0 border-t border-border/60 p-4">
-              <Button className="w-full gap-2 bg-primary hover:bg-primary/90 h-9 text-sm">
-                <Download className="h-4 w-4" /> Télécharger le PDF
+              <a ref={downloadLinkRef} className="hidden" aria-hidden />
+              <Button
+                className="w-full gap-2 bg-primary hover:bg-primary/90 h-9 text-sm"
+                onClick={handleDownload}
+                disabled={!doc?.fichierUrl || downloading}
+              >
+                {downloading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Download className="h-4 w-4" />}
+                {downloading ? "Téléchargement…" : "Télécharger le PDF"}
               </Button>
             </div>
           </div>
@@ -133,6 +175,7 @@ export default function DocumentDetailPage() {
             style={{ height: "calc(100vh - 10rem)" }}>
             <PdfViewer
               fileUrl={doc.fichierUrl}
+              fileName={doc.titre}
               pages={doc.pages}
               page={pdfPage}
               onPageChange={setPdfPage}

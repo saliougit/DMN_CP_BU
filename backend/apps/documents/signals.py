@@ -4,23 +4,32 @@ from .models import Document
 from . import search
 
 
+def _fire(task_name: str, *args):
+    try:
+        from . import tasks
+        getattr(tasks, task_name).delay(*args)
+    except Exception:
+        pass  # Celery/Redis non disponible (ex: manage.py shell, tests)
+
+
 @receiver(post_save, sender=Document)
 def on_document_save(sender, instance, created, **kwargs):
-    if instance.statut == "approuve":
-        search.index_document(instance)
-        if not created:  # notification uniquement après approbation, pas à la création directe par un admin
-            try:
-                from .tasks import notifier_approbation
-                notifier_approbation.delay(str(instance.id))
-            except Exception:
-                pass  # Celery/Redis non disponible (ex: manage.py shell, tests)
-    elif instance.statut == "rejete":
-        search.delete_from_index(instance.id)
-        try:
-            from .tasks import notifier_rejet
-            notifier_rejet.delay(str(instance.id))
-        except Exception:
-            pass
+    doc_id = str(instance.id)
+
+    if created and instance.statut == "en_attente":
+        # Nouvelle soumission → notifier les admins
+        _fire("notifier_admins_soumission", doc_id)
+
+    elif not created:
+        if instance.statut == "approuve":
+            search.index_document(instance)
+            _fire("notifier_approbation", doc_id)           # membre
+            _fire("notifier_admins_approbation", doc_id)    # admins
+
+        elif instance.statut == "rejete":
+            search.delete_from_index(instance.id)
+            _fire("notifier_rejet", doc_id)                 # membre
+            _fire("notifier_admins_rejet", doc_id)          # admins
 
 
 @receiver(post_delete, sender=Document)

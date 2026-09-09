@@ -39,7 +39,7 @@ export function PublicNavbar() {
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" priority />
           </div>
           <div className="hidden sm:block">
-            <span className="block text-sm font-bold leading-tight text-primary">DMN-BU</span>
+            <span className="block text-sm font-bold leading-tight text-primary">DMN-BN</span>
             <span className="block text-xs text-muted-foreground leading-tight">Bibliothèque Numérique</span>
           </div>
         </Link>

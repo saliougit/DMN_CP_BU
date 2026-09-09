@@ -100,7 +100,7 @@ export default function SoumissionsPage() {
     rejete: allDocs.filter((d) => d.statut === "rejete").length,
   }), [allDocs])
 
-  async function handleApprouver(doc: Document, _classif: PickedNode) {
+  async function handleApprouver(doc: Document, _classif?: PickedNode) {
     try {
       await api.approuverDocument(doc.id)
       toast.success("Document approuvé", {
@@ -194,7 +194,7 @@ export default function SoumissionsPage() {
               key={doc.id}
               doc={doc}
               onPreview={() => setDetailDoc(doc)}
-              onApprouver={() => setDetailDoc(doc)}
+              onApprouver={() => handleApprouver(doc)}
               onRejeter={() => setRejeteDoc(doc)}
             />
           ))}

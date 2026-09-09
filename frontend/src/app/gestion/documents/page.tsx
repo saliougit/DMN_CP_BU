@@ -297,7 +297,7 @@ export default function AdminDocumentsPage() {
                       <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem className="gap-2 text-xs" onClick={() => router.push(`/admin/documents/${doc.id}`)}><Eye className="h-3.5 w-3.5" /> Voir</DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2 text-xs" onClick={() => router.push(`/gestion/documents/${doc.id}`)}><Eye className="h-3.5 w-3.5" /> Voir</DropdownMenuItem>
                       <DropdownMenuItem className="gap-2 text-xs"><Download className="h-3.5 w-3.5" /> Télécharger</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleSupprimer(doc.id)}
                         className="gap-2 text-xs text-destructive"><Trash2 className="h-3.5 w-3.5" /> Supprimer</DropdownMenuItem>

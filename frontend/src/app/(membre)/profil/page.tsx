@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   User, Mail, BookOpen, Calendar,
-  FileText, LogOut, ArrowLeft, CheckCircle2, Clock, XCircle, Upload, Layers
+  FileText, LogOut, ArrowLeft, CheckCircle2, Clock, XCircle, Upload, Layers,
+  Lock, Eye, EyeOff, Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,9 @@ export default function ProfilPage() {
 
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ old: "", new: "", confirm: "" })
+  const [showPwd, setShowPwd] = useState(false)
+  const [savingPwd, setSavingPwd] = useState(false)
   const [mesDocuments, setMesDocuments] = useState<Document[]>([])
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
@@ -92,6 +96,22 @@ export default function ProfilPage() {
       toast.error("Erreur lors de la mise à jour")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (pwdForm.new !== pwdForm.confirm) { toast.error("Les mots de passe ne correspondent pas"); return }
+    if (pwdForm.new.length < 8) { toast.error("8 caractères minimum"); return }
+    setSavingPwd(true)
+    try {
+      await api.changePassword(pwdForm.old, pwdForm.new)
+      toast.success("Mot de passe modifié")
+      setPwdForm({ old: "", new: "", confirm: "" })
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erreur — vérifiez le mot de passe actuel")
+    } finally {
+      setSavingPwd(false)
     }
   }
 
@@ -232,6 +252,46 @@ export default function ProfilPage() {
                     <ProfileField icon={Calendar}     label="Membre depuis" value={formatDate(user.createdAt)} />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Changement de mot de passe */}
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">Changer le mot de passe</h3>
+                </div>
+                <Separator />
+                <form onSubmit={handleChangePassword} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Mot de passe actuel</Label>
+                    <Input type={showPwd ? "text" : "password"} value={pwdForm.old}
+                      onChange={(e) => setPwdForm((p) => ({ ...p, old: e.target.value }))}
+                      placeholder="••••••••" className="h-9 text-sm" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nouveau mot de passe</Label>
+                    <div className="relative">
+                      <Input type={showPwd ? "text" : "password"} value={pwdForm.new}
+                        onChange={(e) => setPwdForm((p) => ({ ...p, new: e.target.value }))}
+                        placeholder="8 caractères minimum" className="h-9 text-sm pr-10" required />
+                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPwd((v) => !v)}>
+                        {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Confirmer le nouveau mot de passe</Label>
+                    <Input type={showPwd ? "text" : "password"} value={pwdForm.confirm}
+                      onChange={(e) => setPwdForm((p) => ({ ...p, confirm: e.target.value }))}
+                      placeholder="Répétez le mot de passe" className="h-9 text-sm" required />
+                  </div>
+                  <Button type="submit" size="sm" className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90" disabled={savingPwd}>
+                    {savingPwd ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…</> : <><Lock className="h-3.5 w-3.5" /> Modifier le mot de passe</>}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 

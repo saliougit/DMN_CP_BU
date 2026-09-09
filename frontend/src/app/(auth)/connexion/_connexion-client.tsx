@@ -30,7 +30,7 @@ export function ConnexionClient() {
 
     if (result.success) {
       toast.success("Connexion réussie", {
-        description: result.role === "admin" ? "Bienvenue dans l'administration" : "Bienvenue sur DMN-BU",
+        description: result.role === "admin" ? "Bienvenue dans l'administration" : "Bienvenue sur DMN-BN",
       })
       if (result.role === "admin") {
         router.push("/gestion")
@@ -53,7 +53,7 @@ export function ConnexionClient() {
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" priority />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-primary">DMN-BU</h1>
+            <h1 className="text-xl font-bold text-primary">DMN-BN</h1>
             <p className="text-xs text-muted-foreground">Daara Madjmahoun Noreyni · UCAD · Dakar</p>
           </div>
         </div>

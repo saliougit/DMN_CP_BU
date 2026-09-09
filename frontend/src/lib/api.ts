@@ -241,6 +241,16 @@ export const api = {
         return (list as Record<string, unknown>[]).map(mapUser)
       }),
 
+  // Admin — créer un membre/admin
+  createMember: (data: {
+    email: string; password: string; role: "membre" | "admin"
+    prenom?: string; nom?: string; faculte?: string; filiere?: string; niveau?: string
+  }): Promise<User> =>
+    fetchApi<Record<string, unknown>>("/membres/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }, true).then(mapUser),
+
   // Membre — mes documents
   getMesDocuments: (): Promise<Document[]> =>
     fetchApi<{ results: Record<string, unknown>[]; count: number }>("/documents/?mes=true", {}, true)
@@ -267,4 +277,19 @@ export const api = {
     const d = await fetchApi<{ url: string }>(`/documents/${id}/download/`, {}, true)
     return publicMinioUrl(d.url) ?? d.url
   },
+
+  // Mot de passe oublié
+  requestPasswordReset: (email: string): Promise<{ detail: string }> =>
+    fetchApi("/auth/password-reset/", { method: "POST", body: JSON.stringify({ email }) }),
+
+  confirmPasswordReset: (uid: string, token: string, password: string): Promise<{ detail: string }> =>
+    fetchApi("/auth/password-reset/confirm/", { method: "POST", body: JSON.stringify({ uid, token, password }) }),
+
+  // Changement de mot de passe (utilisateur connecté)
+  changePassword: (old_password: string, new_password: string): Promise<{ detail: string }> =>
+    fetchApi("/auth/change-password/", { method: "POST", body: JSON.stringify({ old_password, new_password }) }, true),
+
+  // Admin — changer le mot de passe d'un membre
+  adminSetPassword: (userId: string, password: string, notify = true): Promise<{ detail: string }> =>
+    fetchApi(`/membres/${userId}/set-password/`, { method: "POST", body: JSON.stringify({ password, notify }) }, true),
 }

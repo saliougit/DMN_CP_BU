@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Upload, FileText, X, Loader2, CheckCircle2, ArrowLeft, Sparkles } from "lucide-react"
+import { Upload, FileText, X, Loader2, CheckCircle2, ArrowLeft, Sparkles, Plus, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,6 +26,16 @@ const TYPE_MAP: Record<string, string> = {
   rapport: "rapport",
 }
 
+interface FileEntry {
+  id: string
+  file: File
+  titre: string
+  annee: number
+  parsed: boolean
+  status: "pending" | "uploading" | "done" | "error"
+  error?: string
+}
+
 function parseFilename(
   name: string,
   facultes: Faculte[]
@@ -39,19 +49,16 @@ function parseFilename(
   const type = TYPE_MAP[typeRaw?.toLowerCase?.() ?? ""]
   if (!type || !annee || annee < 1900 || annee > 2100) return { parsed: false }
 
-  // Trouver faculté par code
   const fac = codeFac
     ? facultes.find((f) => f.code?.toLowerCase() === codeFac.toLowerCase()) ?? null
     : null
   const faculteId = fac?.id ?? ""
 
-  // Trouver filière par nom
   const fil = nomFiliere && fac
     ? fac.filieres.find((fi) => fi.nom.toLowerCase().replace(/\s/g, "") === nomFiliere.toLowerCase().replace(/\s/g, ""))
     : null
   const filiereId = fil?.id ?? ""
 
-  // Construire un titre proposé depuis le nom auteur + type
   const typeLabel: Record<string, string> = {
     memoire_master: "Mémoire de Master",
     memoire_licence: "Mémoire de Licence",
@@ -74,11 +81,11 @@ function parseFilename(
 export default function SoumettrePage() {
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
-  const [file, setFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [entries, setEntries] = useState<FileEntry[]>([])
   const [uploading, setUploading] = useState(false)
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
-  const [autoParsed, setAutoParsed] = useState(false)
 
   useEffect(() => {
     api.getFacultes().then(setFacultes).catch(() => {})
@@ -86,8 +93,8 @@ export default function SoumettrePage() {
   }, [])
 
   const [form, setForm] = useState({
-    titre: "", type: "memoire_master",
-    faculteId: "", filiereId: "", niveauId: "", annee: new Date().getFullYear(),
+    type: "memoire_master",
+    faculteId: "", filiereId: "", niveauId: "",
     directeur: "", resume: "",
   })
 
@@ -96,70 +103,102 @@ export default function SoumettrePage() {
     [facultes, form.faculteId]
   )
 
-  function handleFileSelect(f: File | null) {
-    if (!f) { setFile(null); setAutoParsed(false); return }
-    if (f.type !== "application/pdf") {
-      toast.error("Format accepté : PDF uniquement")
-      return
-    }
-    setFile(f)
+  function addFiles(rawFiles: FileList | File[]) {
+    const arr = Array.from(rawFiles)
+    const pdfs = arr.filter((f) => f.type === "application/pdf" || f.name.endsWith(".pdf"))
+    const invalid = arr.length - pdfs.length
+    if (invalid > 0) toast.error(`${invalid} fichier${invalid > 1 ? "s" : ""} ignoré${invalid > 1 ? "s" : ""} — PDF uniquement`)
 
-    // Tenter le parsing automatique du nom de fichier
-    if (facultes.length > 0) {
-      const parsed = parseFilename(f.name, facultes)
-      if (parsed.parsed) {
+    const newEntries: FileEntry[] = pdfs.map((f) => {
+      const parsed = facultes.length > 0 ? parseFilename(f.name, facultes) : { parsed: false }
+      if (parsed.parsed && parsed.type) {
         setForm((prev) => ({
           ...prev,
-          ...(parsed.type ? { type: parsed.type } : {}),
-          ...(parsed.annee ? { annee: parsed.annee } : {}),
+          type: parsed.type!,
           ...(parsed.faculteId ? { faculteId: parsed.faculteId, filiereId: parsed.filiereId ?? "" } : {}),
-          ...(parsed.titre && !prev.titre ? { titre: parsed.titre } : {}),
         }))
-        setAutoParsed(true)
-        toast.success("Fichier analysé", {
-          description: "Les champs ont été pré-remplis depuis le nom de fichier.",
-        })
-      } else {
-        setAutoParsed(false)
+      }
+      return {
+        id: crypto.randomUUID(),
+        file: f,
+        titre: parsed.titre ?? "",
+        annee: parsed.annee ?? new Date().getFullYear(),
+        parsed: parsed.parsed,
+        status: "pending",
+      }
+    })
+
+    if (newEntries.length > 0) {
+      setEntries((prev) => [...prev, ...newEntries])
+      if (newEntries.some((e) => e.parsed)) {
+        toast.success("Fichier(s) analysé(s)", { description: "Les titres ont été pré-remplis depuis les noms de fichiers." })
       }
     }
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    handleFileSelect(e.dataTransfer.files[0] ?? null)
+    addFiles(e.dataTransfer.files)
   }, [facultes]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function removeEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  function updateEntry(id: string, field: "titre" | "annee", value: string | number) {
+    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, [field]: value } : e))
+  }
+
+  async function handleSubmit(evt: React.FormEvent) {
+    evt.preventDefault()
     if (!isAuthenticated) { router.push("/connexion"); return }
-    if (!file) { toast.error("Veuillez sélectionner un fichier PDF"); return }
+    if (entries.length === 0) { toast.error("Ajoutez au moins un fichier PDF"); return }
+    const missing = entries.filter((e) => !e.titre.trim())
+    if (missing.length > 0) { toast.error("Remplissez le titre de chaque document"); return }
+
     setUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append("titre", form.titre)
-      fd.append("auteur", user ? `${user.prenom} ${user.nom}`.trim() : "")
-      fd.append("type", form.type)
-      fd.append("faculte", form.faculteId)
-      fd.append("filiere", form.filiereId)
-      fd.append("niveau", form.niveauId)
-      fd.append("annee", String(form.annee))
-      if (form.directeur) fd.append("directeur", form.directeur)
-      if (form.resume) fd.append("resume", form.resume)
-      fd.append("fichier", file)
-      await api.soumettreDocument(fd)
-      toast.success("Document soumis avec succès", {
-        description: "Il sera vérifié par un administrateur avant publication.",
+    let successCount = 0
+
+    for (const entry of entries) {
+      setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "uploading" } : e))
+      try {
+        const fd = new FormData()
+        fd.append("titre", entry.titre.trim())
+        fd.append("auteur", user ? `${user.prenom} ${user.nom}`.trim() : "")
+        fd.append("type", form.type)
+        fd.append("faculte", form.faculteId)
+        fd.append("filiere", form.filiereId)
+        fd.append("niveau", form.niveauId)
+        fd.append("annee", String(entry.annee))
+        if (form.directeur) fd.append("directeur", form.directeur)
+        if (form.resume) fd.append("resume", form.resume)
+        fd.append("fichier", entry.file)
+        await api.soumettreDocument(fd)
+        setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "done" } : e))
+        successCount++
+      } catch (err: any) {
+        setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "error", error: err?.message ?? "Erreur" } : e))
+      }
+    }
+
+    setUploading(false)
+
+    if (successCount === entries.length) {
+      toast.success(`${successCount} document${successCount > 1 ? "s" : ""} soumis avec succès`, {
+        description: "Ils seront vérifiés par un administrateur avant publication.",
       })
       router.push("/profil/mes-documents")
-    } catch (err: any) {
-      toast.error("Erreur lors de la soumission", { description: err?.message ?? "Réessayez." })
-    } finally {
-      setUploading(false)
+    } else if (successCount > 0) {
+      toast.warning(`${successCount}/${entries.length} documents soumis`, {
+        description: "Certains ont échoué — vérifiez les erreurs ci-dessus.",
+      })
+    } else {
+      toast.error("Échec de la soumission")
     }
   }
 
   const selectCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+  const doneCount = entries.filter((e) => e.status === "done").length
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -171,7 +210,7 @@ export default function SoumettrePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Déposer un document</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Soumettez votre mémoire, thèse ou article. Un administrateur vérifiera et classera le document avant publication.
+            Soumettez vos mémoires, thèses ou articles. Un administrateur vérifiera et classera chaque document avant publication.
           </p>
         </div>
 
@@ -185,51 +224,109 @@ export default function SoumettrePage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Zone drop */}
           <div
-            onDragOver={(e) => { e.preventDefault() }}
+            onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
-            onClick={() => document.getElementById("submit-pdf")?.click()}
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all ${
-              file ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/30"
-            }`}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-all border-border hover:border-primary/40 hover:bg-muted/30 gap-2"
           >
-            {file ? (
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-primary" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{file.name}</p>
-                    {autoParsed && (
-                      <Badge className="text-[9px] gap-1 bg-primary/10 text-primary border-0 px-1.5 py-0">
-                        <Sparkles className="h-2.5 w-2.5" /> Auto-parsé
-                      </Badge>
+            <Upload className="h-7 w-7 text-muted-foreground" />
+            <p className="text-sm font-medium">Déposer vos fichiers PDF ici</p>
+            <p className="text-xs text-muted-foreground">ou cliquez pour parcourir — plusieurs fichiers acceptés</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = "" }}
+            />
+          </div>
+
+          {/* Liste des fichiers */}
+          {entries.length > 0 && (
+            <div className="space-y-2">
+              {entries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className={`flex items-start gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                    entry.status === "done" ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30" :
+                    entry.status === "error" ? "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30" :
+                    entry.status === "uploading" ? "border-primary/40 bg-primary/5" :
+                    "border-border bg-card"
+                  }`}
+                >
+                  <div className="mt-0.5 flex-shrink-0">
+                    {entry.status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                    {entry.status === "error" && <AlertCircle className="h-4 w-4 text-red-500" />}
+                    {entry.status === "uploading" && <Loader2 className="h-4 w-4 text-primary animate-spin" />}
+                    {entry.status === "pending" && <FileText className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs text-muted-foreground truncate flex-1">{entry.file.name}</span>
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">{(entry.file.size / 1024 / 1024).toFixed(1)} Mo</span>
+                      {entry.parsed && (
+                        <Badge className="text-[9px] gap-1 bg-primary/10 text-primary border-0 px-1.5 py-0 flex-shrink-0">
+                          <Sparkles className="h-2.5 w-2.5" /> Auto
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={entry.titre}
+                        onChange={(e) => updateEntry(entry.id, "titre", e.target.value)}
+                        placeholder="Titre du document *"
+                        className="h-8 text-xs flex-1"
+                        disabled={entry.status !== "pending"}
+                        required
+                      />
+                      <Input
+                        type="number"
+                        value={entry.annee}
+                        onChange={(e) => updateEntry(entry.id, "annee", Number(e.target.value))}
+                        className="h-8 text-xs w-20 flex-shrink-0"
+                        disabled={entry.status !== "pending"}
+                        min={1900} max={2100}
+                      />
+                    </div>
+                    {entry.status === "error" && entry.error && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{entry.error}</p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} Mo</p>
+
+                  {entry.status === "pending" && (
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(entry.id)}
+                      className="flex-shrink-0 rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); setAutoParsed(false) }}
-                  className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Déposer votre fichier PDF</p>
-                <p className="text-xs text-muted-foreground mt-1">ou cliquez pour parcourir</p>
-              </>
-            )}
-            <input id="submit-pdf" type="file" accept=".pdf,application/pdf" className="hidden"
-              onChange={(e) => { handleFileSelect(e.target.files?.[0] ?? null) }} />
-          </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors px-1"
+              >
+                <Plus className="h-3.5 w-3.5" /> Ajouter d&apos;autres fichiers
+              </button>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Champs communs */}
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Informations communes à tous les documents
+          </p>
 
           <Card>
             <CardContent className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs">Titre du document <span className="text-destructive">*</span></Label>
-                  <Input value={form.titre} onChange={(e) => setForm((f) => ({ ...f, titre: e.target.value }))}
-                    placeholder="Titre complet du mémoire / thèse / article" className="h-10 text-sm" required />
-                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Type <span className="text-destructive">*</span></Label>
                   <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
@@ -240,11 +337,6 @@ export default function SoumettrePage() {
                     <option value="article">Article</option>
                     <option value="rapport">Rapport</option>
                   </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Année de soutenance <span className="text-destructive">*</span></Label>
-                  <Input type="number" value={form.annee} onChange={(e) => setForm((f) => ({ ...f, annee: Number(e.target.value) }))}
-                    className="h-10 text-sm" required />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Faculté <span className="text-destructive">*</span></Label>
@@ -263,7 +355,7 @@ export default function SoumettrePage() {
                     {filieres.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                   </select>
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <Label className="text-xs">Niveau <span className="text-destructive">*</span></Label>
                   <select value={form.niveauId} onChange={(e) => setForm((f) => ({ ...f, niveauId: e.target.value }))}
                     className={selectCls} required>
@@ -285,9 +377,15 @@ export default function SoumettrePage() {
             </CardContent>
           </Card>
 
-          <Button type="submit" size="lg" className="w-full gap-2 bg-primary hover:bg-primary/90" disabled={uploading}>
-            {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…</>
-              : <><Upload className="h-4 w-4" /> Soumettre pour validation</>}
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full gap-2 bg-primary hover:bg-primary/90"
+            disabled={uploading || entries.length === 0}
+          >
+            {uploading
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours… ({doneCount}/{entries.length})</>
+              : <><Upload className="h-4 w-4" /> Soumettre {entries.length > 1 ? `${entries.length} documents` : "pour validation"}</>}
           </Button>
 
           {!isAuthenticated && (

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Download, FileText, Calendar, User,
@@ -40,6 +40,7 @@ function formatDatetime(iso: string | undefined) {
 
 export default function AdminDocumentDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const [doc, setDoc] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [pdfPage, setPdfPage] = useState(1)
@@ -156,7 +157,7 @@ export default function AdminDocumentDetailPage() {
         <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-lg font-semibold">Document introuvable</h2>
         <p className="text-sm text-muted-foreground mt-1">Ce document n&apos;existe pas ou a été supprimé.</p>
-        <Link href="/gestion/documents"><Button variant="outline" size="sm" className="mt-4 gap-2"><ArrowLeft className="h-4 w-4" /> Retour au catalogue</Button></Link>
+        <Button variant="outline" size="sm" className="mt-4 gap-2" onClick={() => window.history.length > 1 ? router.back() : router.push("/gestion/documents")}><ArrowLeft className="h-4 w-4" /> Retour</Button>
       </div>
     )
   }
@@ -173,10 +174,13 @@ export default function AdminDocumentDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/gestion/documents" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+      <button
+        onClick={() => window.history.length > 1 ? router.back() : router.push("/gestion/documents")}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+      >
         <ArrowLeft className="h-4 w-4" />
-        Retour au catalogue
-      </Link>
+        Retour
+      </button>
 
       <div className="flex flex-col lg:flex-row gap-6" style={{ minHeight: "calc(100vh - 12rem)" }}>
         {/* Panneau gauche : Métadonnées */}

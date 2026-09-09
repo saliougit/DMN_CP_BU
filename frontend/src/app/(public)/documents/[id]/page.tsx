@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { useParams } from "next/navigation"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Download, FileText, Calendar, User,
@@ -22,6 +22,7 @@ import type { Document } from "@/types"
 
 export default function DocumentDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const [doc, setDoc] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [pdfPage, setPdfPage] = useState(1)
@@ -74,10 +75,13 @@ export default function DocumentDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <Link href="/recherche" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
+      <button
+        onClick={() => window.history.length > 1 ? router.back() : router.push("/recherche")}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
+      >
         <ArrowLeft className="h-4 w-4" />
-        Retour aux résultats
-      </Link>
+        Retour
+      </button>
 
       <div className="flex flex-col lg:flex-row gap-6" style={{ minHeight: "calc(100vh - 10rem)" }}>
         {/* Panneau gauche : Métadonnées compactes */}

@@ -109,7 +109,8 @@ services:
       EMAIL_PORT:             ${EMAIL_PORT:-587}
       EMAIL_HOST_USER:        ${EMAIL_HOST_USER:-}
       EMAIL_HOST_PASSWORD:    ${EMAIL_HOST_PASSWORD:-}
-      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@budmnucad.sn}
+      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@bndmnucad.sn}
+      FRONTEND_URL:           ${FRONTEND_URL:-http://localhost}
     volumes:
       - static_files:/app/staticfiles
     depends_on:
@@ -149,7 +150,8 @@ services:
       EMAIL_PORT:             ${EMAIL_PORT:-587}
       EMAIL_HOST_USER:        ${EMAIL_HOST_USER:-}
       EMAIL_HOST_PASSWORD:    ${EMAIL_HOST_PASSWORD:-}
-      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@budmnucad.sn}
+      DEFAULT_FROM_EMAIL:     ${DEFAULT_FROM_EMAIL:-noreply@bndmnucad.sn}
+      FRONTEND_URL:           ${FRONTEND_URL:-http://localhost}
     depends_on:
       db:
         condition: service_healthy

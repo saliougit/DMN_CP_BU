@@ -129,3 +129,133 @@
     @apply font-sans;
   }
 }
+
+/* ─── Perspective wrapper ─── */
+.book-wrapper {
+  perspective: 820px;
+  perspective-origin: 50% 42%;
+}
+
+/* ─── Scène 3D ─── */
+.book-stage {
+  position: relative;
+  width: min(54vw, 320px);
+  aspect-ratio: 0.685;
+  transform-style: preserve-3d;
+  transition: transform 110ms ease-out, filter 220ms ease-out;
+  touch-action: none;
+  user-select: none;
+  filter:
+    drop-shadow(32px 42px 24px oklch(0.12 0.04 148 / 44%))
+    drop-shadow(6px 8px 6px oklch(0.12 0.04 148 / 18%));
+}
+
+.book-stage:hover {
+  filter:
+    drop-shadow(38px 50px 28px oklch(0.12 0.04 148 / 50%))
+    drop-shadow(8px 10px 8px oklch(0.12 0.04 148 / 22%));
+}
+
+/* ─── Face commune ─── */
+.book-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 2px 9px 9px 2px;
+  transform-style: preserve-3d;
+}
+
+/* ─── Plat avant (couverture) ─── */
+.book-front {
+  background-color: #ece8df;
+  background-image: url("/khidma_2.jpeg");
+  background-position: center center;
+  background-size: cover;
+  border: 1px solid rgba(15, 60, 30, 0.28);
+  box-shadow:
+    inset -24px 0 36px rgba(0, 0, 0, 0.26),
+    inset  4px 0  8px rgba(255, 255, 255, 0.06);
+  transform: translateZ(22px);
+}
+
+/* Vernis / reflet diagonal */
+.book-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.07) 32%,
+    transparent 54%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+  pointer-events: none;
+}
+
+/* ─── Plat arrière ─── */
+.book-back {
+  background: linear-gradient(
+    158deg,
+    #041e0f 0%,
+    #074523 28%,
+    #0a6035 48%,
+    #c8992f 50%,
+    #0a6035 52%,
+    #041e0f 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transform: rotateY(180deg) translateZ(22px);
+}
+
+/* ─── Tranche & tranche pages ─── */
+/* book width = 320px → half = 160px → translateZ(160px) */
+/* book thickness = 44px → half = 22px → front/back translateZ(22px) */
+.book-spine,
+.book-page-edge {
+  inset: 0 auto 0 50%;
+  width: 44px;
+  border-radius: 0;
+}
+
+.book-spine {
+  background: linear-gradient(
+    90deg,
+    #020f07 0%,
+    #042e18 14%,
+    #c8992f 38%,
+    #f0c760 46%,
+    #c8992f 54%,
+    #042e18 82%,
+    #020f07 100%
+  );
+  box-shadow:
+    inset 0 0 14px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateX(-50%) rotateY(-90deg) translateZ(160px);
+}
+
+.book-page-edge {
+  background: repeating-linear-gradient(
+    0deg,
+    #f7f3eb 0 1px,
+    #ede8da 2px 3px,
+    #f2ede3 4px 5px,
+    #d4cfc0 6px 7px
+  );
+  box-shadow: inset 3px 0 12px rgba(0, 0, 0, 0.07);
+  transform: translateX(-50%) rotateY(90deg) translateZ(160px);
+}
+
+@media (max-width: 640px) {
+  .book-stage {
+    width: min(70vw, 280px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-stage {
+    transition: none;
+  }
+}

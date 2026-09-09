@@ -66,7 +66,7 @@ export default function InscriptionPage() {
 
     if (result.success) {
       toast.success("Compte créé avec succès !", {
-        description: "Bienvenue sur DMN-BU. Vous pouvez maintenant déposer vos documents.",
+        description: "Bienvenue sur DMN-BN. Vous pouvez maintenant déposer vos documents.",
       })
       router.push("/")
     } else {
@@ -86,7 +86,7 @@ export default function InscriptionPage() {
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" priority />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-primary">DMN-BU</h1>
+            <h1 className="text-xl font-bold text-primary">DMN-BN</h1>
             <p className="text-xs text-muted-foreground">Daara Madjmahoun Noreyni · UCAD · Dakar</p>
           </div>
         </div>

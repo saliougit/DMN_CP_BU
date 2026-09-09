@@ -76,7 +76,7 @@ def notifier_admins_soumission(self, doc_id: str):
     auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
     try:
         _send_to_many(
-            subject=f"[DMN-BU] Nouvelle soumission — {doc.titre}",
+            subject=f"[DMN-BN] Nouvelle soumission — {doc.titre}",
             template="emails/admin_soumission.html",
             context={"doc": doc, "auteur": auteur},
             recipients=recipients,
@@ -98,7 +98,7 @@ def notifier_admins_approbation(self, doc_id: str):
     auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
     try:
         _send_to_many(
-            subject=f"[DMN-BU] Document approuvé — {doc.titre}",
+            subject=f"[DMN-BN] Document approuvé — {doc.titre}",
             template="emails/admin_approbation.html",
             context={"doc": doc, "auteur": auteur},
             recipients=recipients,
@@ -120,7 +120,7 @@ def notifier_admins_rejet(self, doc_id: str):
     auteur = doc.soumis_par.get_full_name() if doc.soumis_par else "Inconnu"
     try:
         _send_to_many(
-            subject=f"[DMN-BU] Document rejeté — {doc.titre}",
+            subject=f"[DMN-BN] Document rejeté — {doc.titre}",
             template="emails/admin_rejet.html",
             context={"doc": doc, "auteur": auteur},
             recipients=recipients,
@@ -142,7 +142,7 @@ def notifier_admins_compte(self, user_id: str):
     nom = membre.get_full_name() or membre.username
     try:
         _send_to_many(
-            subject=f"[DMN-BU] Nouveau membre — {nom}",
+            subject=f"[DMN-BN] Nouveau membre — {nom}",
             template="emails/admin_nouveau_compte.html",
             context={
                 "membre": nom,
@@ -152,6 +152,54 @@ def notifier_admins_compte(self, user_id: str):
                 "niveau": membre.niveau,
             },
             recipients=recipients,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def envoyer_email_reset_password(self, user_id: str, reset_url: str):
+    from apps.accounts.models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+    nom = user.get_full_name() or user.username
+    try:
+        _send(
+            subject="[DMN-BN] Réinitialisation de votre mot de passe",
+            template="emails/reset_password.html",
+            context={"nom": nom, "reset_url": reset_url},
+            recipient=user.email,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def notifier_bienvenue_membre(self, user_id: str, password: str):
+    from apps.accounts.models import User
+    try:
+        membre = User.objects.select_related("faculte", "filiere", "niveau").get(id=user_id)
+    except User.DoesNotExist:
+        return
+    if not membre.email:
+        return
+    from django.conf import settings as _s
+    login_url = getattr(_s, "FRONTEND_URL", "http://localhost") + "/connexion"
+    nom = membre.get_full_name() or membre.username
+    try:
+        _send(
+            subject="[DMN-BN] Bienvenue — vos identifiants de connexion",
+            template="emails/membre_bienvenue.html",
+            context={
+                "nom": nom,
+                "username": membre.username,
+                "password": password,
+                "email": membre.email,
+                "login_url": login_url,
+            },
+            recipient=membre.email,
         )
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60)
@@ -172,7 +220,7 @@ def notifier_approbation(self, doc_id: str):
     nom = destinataire.get_full_name() or destinataire.username
     try:
         _send(
-            subject=f"[DMN-BU] Votre document a été approuvé — {doc.titre}",
+            subject=f"[DMN-BN] Votre document a été approuvé — {doc.titre}",
             template="emails/approbation.html",
             context={"doc": doc, "nom": nom},
             recipient=destinataire.email,
@@ -196,7 +244,7 @@ def notifier_rejet(self, doc_id: str):
     nom = destinataire.get_full_name() or destinataire.username
     try:
         _send(
-            subject=f"[DMN-BU] Décision de la Commission Pédagogique — {doc.titre}",
+            subject=f"[DMN-BN] Décision de la Commission Pédagogique — {doc.titre}",
             template="emails/rejet.html",
             context={"doc": doc, "nom": nom},
             recipient=destinataire.email,

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { api } from "@/lib/api"
 
 export default function MotDePasseOubliePage() {
   const [email, setEmail] = useState("")
@@ -17,10 +18,15 @@ export default function MotDePasseOubliePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setSent(true)
-    setLoading(false)
-    toast.success("Email envoyé", { description: "Consultez votre boîte de réception." })
+    try {
+      await api.requestPasswordReset(email.trim())
+      setSent(true)
+    } catch {
+      // On affiche quand même "envoyé" pour ne pas révéler si l'email existe
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -31,7 +37,7 @@ export default function MotDePasseOubliePage() {
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" priority />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-primary">DMN-BU</h1>
+            <h1 className="text-xl font-bold text-primary">DMN-BN</h1>
             <p className="text-xs text-muted-foreground">Daara Madjmahoun Noreyni · UCAD · Dakar</p>
           </div>
         </div>
@@ -44,7 +50,11 @@ export default function MotDePasseOubliePage() {
               <p className="text-xs text-muted-foreground">
                 Si un compte existe avec cette adresse, vous recevrez un lien pour réinitialiser votre mot de passe.
               </p>
-              <Link href="/connexion"><Button variant="outline" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" /> Retour à la connexion</Button></Link>
+              <Link href="/connexion">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Retour à la connexion
+                </Button>
+              </Link>
             </div>
           ) : (
             <>
@@ -64,7 +74,9 @@ export default function MotDePasseOubliePage() {
                 </Button>
               </form>
               <p className="text-center text-xs text-muted-foreground">
-                <Link href="/connexion" className="text-primary hover:underline"><ArrowLeft className="h-3 w-3 inline" /> Retour à la connexion</Link>
+                <Link href="/connexion" className="text-primary hover:underline">
+                  <ArrowLeft className="h-3 w-3 inline" /> Retour à la connexion
+                </Link>
               </p>
             </>
           )}

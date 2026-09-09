@@ -59,9 +59,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return response
 
     def perform_create(self, serializer):
+        import pdfplumber
         user = self.request.user
         statut = "approuve" if user.role == "admin" else "en_attente"
-        serializer.save(soumis_par=user, statut=statut)
+
+        nb_pages = None
+        fichier = self.request.FILES.get("fichier")
+        if fichier:
+            try:
+                with pdfplumber.open(fichier) as pdf:
+                    nb_pages = len(pdf.pages)
+            except Exception:
+                pass
+            fichier.seek(0)  # reset pour que Django puisse sauvegarder le fichier
+
+        serializer.save(soumis_par=user, statut=statut, pages=nb_pages)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminRole])
     def approuver(self, request, pk=None):

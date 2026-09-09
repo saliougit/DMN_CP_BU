@@ -1,0 +1,94 @@
+{% extends "emails/base.html" %}
+{% block subject %}Bienvenue sur DMN-BN — vos identifiants de connexion{% endblock %}
+
+{% block content %}
+
+  <p style="margin:0 0 28px;font-size:15px;color:#1a1a1a;line-height:1.8;">
+    Assalâmou Alaïkoum,<br />
+    <strong>{{ nom }}</strong>,
+  </p>
+
+  <p style="margin:0 0 28px;font-size:14px;color:#444;line-height:1.9;">
+    Bienvenue sur la <strong>Bibliothèque Numérique DMN-BN</strong> — Commission Pédagogique
+    du Daara Madjmahoun Noreyni. Un compte a été créé pour vous.
+    Voici vos identifiants de connexion :
+  </p>
+
+  <!-- Identifiants -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+    <tr>
+      <td style="padding:24px 28px;background-color:#f7f6f2;border-left:4px solid #1B6B2E;">
+
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:6px 0;width:120px;">
+              <span style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;font-family:Arial,sans-serif;">
+                Identifiant
+              </span>
+            </td>
+            <td style="padding:6px 0;">
+              <strong style="font-size:15px;color:#1a1a1a;font-family:monospace,monospace;letter-spacing:1px;">
+                {{ username }}
+              </strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;">
+              <span style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;font-family:Arial,sans-serif;">
+                Mot de passe
+              </span>
+            </td>
+            <td style="padding:6px 0;">
+              <strong style="font-size:15px;color:#1a1a1a;font-family:monospace,monospace;letter-spacing:1px;">
+                {{ password }}
+              </strong>
+            </td>
+          </tr>
+          {% if email %}
+          <tr>
+            <td style="padding:6px 0;">
+              <span style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#999;font-family:Arial,sans-serif;">
+                Email
+              </span>
+            </td>
+            <td style="padding:6px 0;">
+              <span style="font-size:13px;color:#444;">{{ email }}</span>
+            </td>
+          </tr>
+          {% endif %}
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 20px;font-size:13px;color:#888;background-color:#fffbea;border:1px solid #f0e68c;padding:12px 16px;line-height:1.8;">
+    &#9888;&nbsp; Pour la sécurité de votre compte, nous vous recommandons de
+    <strong>modifier votre mot de passe</strong> dès votre première connexion.
+  </p>
+
+  <!-- Bouton connexion -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 36px;">
+    <tr>
+      <td align="center">
+        <a href="{{ login_url }}"
+           style="display:inline-block;padding:13px 36px;background-color:#1B6B2E;color:#ffffff;
+                  text-decoration:none;font-size:14px;font-weight:600;font-family:Arial,sans-serif;
+                  letter-spacing:0.4px;">
+          Se connecter
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 40px;font-size:14px;color:#444;line-height:1.9;">
+    Une fois connecté, vous pourrez consulter les travaux académiques des membres
+    et soumettre vos propres mémoires, thèses ou articles.
+  </p>
+
+  <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">
+    Dieureudieuf Mouride,<br />
+    <strong>La Commission Pédagogique</strong>
+  </p>
+
+{% endblock %}

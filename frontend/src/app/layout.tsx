@@ -11,7 +11,7 @@ const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] })
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "DMN-BU | Bibliothèque Numérique",
+  title: "DMN-BN | Bibliothèque Numérique",
   description:
     "Plateforme de consultation et de dépôt de mémoires, licences et thèses des membres du Daara Madjmahoun Noreyni (DMN) — UCAD, Dakar.",
   keywords: ["bibliothèque", "mémoires", "thèses", "mouride", "daara", "recherche"],

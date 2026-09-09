@@ -48,14 +48,42 @@ const anim = (show: boolean, delay = 0) => ({
 export default function HomePage() {
   const [mounted, setMounted] = useState(false)
   const [stats, setStats] = useState({ totalDocuments: 0, totalFacultes: 0, totalMembres: 0 })
+  const [bookRotation, setBookRotation] = useState(25)
+  const [bookScale, setBookScale] = useState(1)
+  const [isDraggingBook, setIsDraggingBook] = useState(false)
+  const bookDragRef = useRef({ pointerId: -1, startX: 0, startRotation: 0 })
   const { ref: statsRef, inView: statsInView } = useInView()
   const { ref: commRef, inView: commInView } = useInView()
+  const { ref: realizationRef, inView: realizationInView } = useInView()
   const { ref: typesRef, inView: typesInView } = useInView()
 
   useEffect(() => {
     setMounted(true)
     api.getPublicStats().then(setStats).catch(() => {})
   }, [])
+
+  const handleBookPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    bookDragRef.current = { pointerId: event.pointerId, startX: event.clientX, startRotation: bookRotation }
+    setIsDraggingBook(true)
+  }
+
+  const handleBookPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (bookDragRef.current.pointerId !== event.pointerId) return
+    const nextRotation = bookDragRef.current.startRotation + (event.clientX - bookDragRef.current.startX) * 0.6
+    setBookRotation(Math.max(-20, Math.min(200, nextRotation)))
+  }
+
+  const handleBookPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (bookDragRef.current.pointerId !== event.pointerId) return
+    bookDragRef.current.pointerId = -1
+    setIsDraggingBook(false)
+  }
+
+  const handleBookWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setBookScale((currentScale) => Math.max(0.85, Math.min(1.15, currentScale - event.deltaY * 0.001)))
+  }
 
   const STATS = [
     { icon: FileText, label: "Documents", value: stats.totalDocuments || "—" },
@@ -191,6 +219,57 @@ export default function HomePage() {
               <p className="text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Nos réalisations */}
+      <section
+        ref={realizationRef as React.RefObject<HTMLElement>}
+        className="border-y border-border/60 bg-muted/20 px-4 py-16"
+      >
+        <div className="mx-auto grid max-w-4xl items-center gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(280px,1.1fr)]">
+          <div
+            className={`transition-all duration-700 ${realizationInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+          >
+            <span className="inline-block mb-3 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
+              Nos réalisations
+            </span>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Journal de la Commission Pédagogique
+            </h2>
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground">
+              Découvrez une publication consacrée à la transmission des savoirs et aux travaux de la Commission Pédagogique.
+            </p>
+            <p className="mt-5 text-xs font-medium text-primary/80">
+              Faites glisser la couverture pour l&apos;explorer
+            </p>
+          </div>
+
+          <div
+            className={`flex min-h-[460px] items-center justify-center transition-all duration-700 ${realizationInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+            style={{ transitionDelay: "140ms" }}
+          >
+            <div className="book-wrapper">
+              <div
+                aria-label="Couverture 3D du journal de la Commission Pédagogique"
+                className={`book-stage ${isDraggingBook ? "cursor-grabbing" : "cursor-grab"}`}
+                onPointerDown={handleBookPointerDown}
+                onPointerMove={handleBookPointerMove}
+                onPointerUp={handleBookPointerUp}
+                onPointerCancel={handleBookPointerUp}
+                onWheel={handleBookWheel}
+                role="img"
+                style={{
+                  transform: `rotateX(6deg) rotateY(${bookRotation}deg) scale(${bookScale})`,
+                }}
+              >
+                <div className="book-face book-front" />
+                <div className="book-face book-back" />
+                <div className="book-face book-spine" />
+                <div className="book-face book-page-edge" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -62,7 +62,7 @@ export function AdminSidebar() {
             <Image src="/logo.png" alt="Logo DMN" fill className="object-contain" />
           </div>
           <div className="group-data-[collapsible=icon]:hidden">
-            <p className="text-sm font-bold text-primary leading-tight">DMN-BU</p>
+            <p className="text-sm font-bold text-primary leading-tight">DMN-BN</p>
             <p className="text-xs text-muted-foreground leading-tight">Administration</p>
           </div>
         </Link>

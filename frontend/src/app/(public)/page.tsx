@@ -49,7 +49,6 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false)
   const [stats, setStats] = useState({ totalDocuments: 0, totalFacultes: 0, totalMembres: 0 })
   const [bookRotation, setBookRotation] = useState(25)
-  const [bookScale, setBookScale] = useState(1)
   const [isDraggingBook, setIsDraggingBook] = useState(false)
   const bookDragRef = useRef({ pointerId: -1, startX: 0, startRotation: 0 })
   const { ref: statsRef, inView: statsInView } = useInView()
@@ -58,8 +57,9 @@ export default function HomePage() {
   const { ref: typesRef, inView: typesInView } = useInView()
 
   useEffect(() => {
-    setMounted(true)
+    const frameId = requestAnimationFrame(() => setMounted(true))
     api.getPublicStats().then(setStats).catch(() => {})
+    return () => cancelAnimationFrame(frameId)
   }, [])
 
   const handleBookPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -80,11 +80,6 @@ export default function HomePage() {
     setIsDraggingBook(false)
   }
 
-  const handleBookWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setBookScale((currentScale) => Math.max(0.85, Math.min(1.15, currentScale - event.deltaY * 0.001)))
-  }
-
   const STATS = [
     { icon: FileText, label: "Documents", value: stats.totalDocuments || "—" },
     { icon: BookOpen, label: "Facultés couvertes", value: stats.totalFacultes || "—" },
@@ -99,6 +94,8 @@ export default function HomePage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/8 via-transparent to-transparent"
         />
+        <div aria-hidden className="hero-pattern pointer-events-none absolute inset-0 -z-10" />
+        <div aria-hidden className="hero-glow pointer-events-none absolute -z-10" />
 
         {/* Logo avec animation au survol */}
         <div {...anim(mounted, 0)} className={`mb-6 flex flex-col items-center gap-3 ${anim(mounted, 0).className}`} style={anim(mounted, 0).style}>
@@ -257,10 +254,9 @@ export default function HomePage() {
                 onPointerMove={handleBookPointerMove}
                 onPointerUp={handleBookPointerUp}
                 onPointerCancel={handleBookPointerUp}
-                onWheel={handleBookWheel}
                 role="img"
                 style={{
-                  transform: `rotateX(6deg) rotateY(${bookRotation}deg) scale(${bookScale})`,
+                  transform: `rotateX(6deg) rotateY(${bookRotation}deg)`,
                 }}
               >
                 <div className="book-face book-front" />

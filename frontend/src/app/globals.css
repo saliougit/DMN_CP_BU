@@ -130,6 +130,52 @@
   }
 }
 
+.hero-pattern {
+  --hp-color: rgb(20 110 65 / 5%);
+  background-image:
+    linear-gradient(30deg,  var(--hp-color) 12%, transparent 12.5%, transparent 87%, var(--hp-color) 87.5%),
+    linear-gradient(150deg, var(--hp-color) 12%, transparent 12.5%, transparent 87%, var(--hp-color) 87.5%),
+    linear-gradient(30deg,  var(--hp-color) 12%, transparent 12.5%, transparent 87%, var(--hp-color) 87.5%),
+    linear-gradient(150deg, var(--hp-color) 12%, transparent 12.5%, transparent 87%, var(--hp-color) 87.5%);
+  background-position: 0 0, 0 0, 20px 35px, 20px 35px;
+  background-size: 40px 70px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  opacity: 0.7;
+  animation: hero-pattern-drift 28s linear infinite;
+}
+
+.hero-glow {
+  --hg-color-inner: rgb(35 150 88 / 16%);
+  --hg-color-mid:   rgb(35 150 88 / 7%);
+  top: 8%;
+  left: 50%;
+  width: min(48vw, 540px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--hg-color-inner) 0%, var(--hg-color-mid) 38%, transparent 70%);
+  filter: blur(10px);
+  transform: translateX(-50%);
+  animation: hero-glow-breathe 8s ease-in-out infinite;
+}
+
+/* Dark mode — opacités renforcées */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-pattern { --hp-color: rgb(50 180 100 / 9%); opacity: 0.85; }
+  :root:not([data-theme="light"]) .hero-glow    { --hg-color-inner: rgb(50 180 100 / 28%); --hg-color-mid: rgb(50 180 100 / 12%); }
+}
+:root[data-theme="dark"] .hero-pattern { --hp-color: rgb(50 180 100 / 9%); opacity: 0.85; }
+:root[data-theme="dark"] .hero-glow    { --hg-color-inner: rgb(50 180 100 / 28%); --hg-color-mid: rgb(50 180 100 / 12%); }
+
+@keyframes hero-pattern-drift {
+  from { background-position: 0 0, 0 0, 20px 35px, 20px 35px; }
+  to { background-position: 40px 70px, 40px 70px, 60px 105px, 60px 105px; }
+}
+
+@keyframes hero-glow-breathe {
+  0%, 100% { opacity: 0.65; transform: translateX(-50%) scale(0.94); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+}
+
 /* ─── Perspective wrapper ─── */
 .book-wrapper {
   perspective: 820px;
@@ -255,6 +301,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-pattern,
+  .hero-glow {
+    animation: none;
+  }
+
   .book-stage {
     transition: none;
   }

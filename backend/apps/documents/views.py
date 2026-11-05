@@ -141,6 +141,16 @@ class StatsView(generics.GenericAPIView):
             .annotate(count=Count("id"))
             .order_by("annee")
         )
+        top_telecharges = (
+            Document.objects.filter(statut="approuve")
+            .order_by("-nb_telechargements")
+            .values("id", "titre", "auteur", "nb_telechargements")[:5]
+        )
+        top_vus = (
+            Document.objects.filter(statut="approuve")
+            .order_by("-nb_consultations")
+            .values("id", "titre", "auteur", "nb_consultations")[:5]
+        )
         return Response({
             "totalDocuments": approuves,   # compat — identique à totalApprouves
             "totalApprouves": approuves,
@@ -151,4 +161,6 @@ class StatsView(generics.GenericAPIView):
             "totalTelechargements": total_telechargements,
             "topFacultes": [{"nom": r["faculte__nom"] or "", "count": r["count"]} for r in top_facultes],
             "documentsParAnnee": [{"annee": r["annee"], "count": r["count"]} for r in docs_par_annee],
+            "topTelecharges": [{"id": str(r["id"]), "titre": r["titre"], "auteur": r["auteur"], "count": r["nb_telechargements"]} for r in top_telecharges],
+            "topVus": [{"id": str(r["id"]), "titre": r["titre"], "auteur": r["auteur"], "count": r["nb_consultations"]} for r in top_vus],
         })

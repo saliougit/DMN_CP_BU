@@ -46,7 +46,11 @@ async function fetchApi<T>(path: string, options: RequestInit = {}, auth = false
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `API ${res.status}`)
+    // body.detail (DRF standard) ou première valeur de champ (validation error)
+    const msg = body.detail
+      ?? (Object.values(body).flat().find((v) => typeof v === "string") as string | undefined)
+      ?? `Erreur ${res.status}`
+    throw new Error(msg)
   }
   return res.json()
 }

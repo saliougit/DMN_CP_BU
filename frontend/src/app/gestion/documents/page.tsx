@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Search, FileText, Download, Trash2, Eye, MoreHorizontal, RefreshCw,
-  Upload, X, Loader2
+  Upload, X, Loader2, ArrowUpDown, ArrowDown
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,9 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from "@/components/ui/sheet"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { api } from "@/lib/api"
@@ -91,12 +94,16 @@ function parseFilename(
   return { auteur, annee, type, faculte: facId, filiere: filId, parsed: parts.length >= 4 }
 }
 
+type SortKey = "recent" | "telecharges" | "vus"
+
 export default function AdminDocumentsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [docs, setDocs] = useState<Document[]>([])
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
   const [recherche, setRecherche] = useState("")
+  const [tri, setTri] = useState<SortKey>((searchParams.get("tri") as SortKey) ?? "recent")
   const [sheetOpen, setSheetOpen] = useState(false)
   const [step, setStep] = useState<"upload" | "classify">("upload")
   const [files, setFiles] = useState<FileEntry[]>([])
@@ -114,14 +121,16 @@ export default function AdminDocumentsPage() {
     api.getNiveaux().then(setNiveaux).catch(() => {})
   }, [])
 
-  const filtrees = useMemo(
-    () => docs.filter((d) =>
+  const filtrees = useMemo(() => {
+    const base = docs.filter((d) =>
       d.titre.toLowerCase().includes(recherche.toLowerCase()) ||
       d.auteur.toLowerCase().includes(recherche.toLowerCase()) ||
       d.faculte.toLowerCase().includes(recherche.toLowerCase())
-    ),
-    [docs, recherche]
-  )
+    )
+    if (tri === "telecharges") return [...base].sort((a, b) => (b.nbTelechargements ?? 0) - (a.nbTelechargements ?? 0))
+    if (tri === "vus")         return [...base].sort((a, b) => (b.nbConsultations ?? 0) - (a.nbConsultations ?? 0))
+    return base
+  }, [docs, recherche, tri])
 
   const { paginated, PaginationBar } = usePagination(filtrees, 8)
 
@@ -260,10 +269,23 @@ export default function AdminDocumentsPage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input value={recherche} onChange={(e) => setRecherche(e.target.value)}
-          placeholder="Rechercher dans le catalogue…" className="h-9 pl-9 rounded-lg text-sm" />
+      <div className="flex items-center gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input value={recherche} onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher dans le catalogue…" className="h-9 pl-9 rounded-lg text-sm" />
+        </div>
+        <Select value={tri} onValueChange={(v) => setTri(v as SortKey)}>
+          <SelectTrigger className="h-9 w-48 text-xs gap-1.5">
+            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent" className="text-xs">Plus récents</SelectItem>
+            <SelectItem value="telecharges" className="text-xs">Plus téléchargés</SelectItem>
+            <SelectItem value="vus" className="text-xs">Plus consultés</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden">
@@ -275,6 +297,12 @@ export default function AdminDocumentsPage() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Faculté</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Type</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">
+                <span className="flex items-center justify-end gap-1"><Download className="h-3 w-3" /> DL</span>
+              </th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">
+                <span className="flex items-center justify-end gap-1"><Eye className="h-3 w-3" /> Vues</span>
+              </th>
               <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
@@ -291,6 +319,16 @@ export default function AdminDocumentsPage() {
                   <Badge className={`text-[10px] ${TYPE_COLORS[doc.type] ?? ""}`}>{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
                 </td>
                 <td className="px-4 py-3 text-sm">{doc.annee}</td>
+                <td className="px-4 py-3 text-right hidden lg:table-cell">
+                  <span className={`text-xs font-medium ${tri === "telecharges" ? "text-purple-600 font-semibold" : "text-muted-foreground"}`}>
+                    {(doc.nbTelechargements ?? 0).toLocaleString("fr-FR")}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right hidden lg:table-cell">
+                  <span className={`text-xs font-medium ${tri === "vus" ? "text-blue-600 font-semibold" : "text-muted-foreground"}`}>
+                    {(doc.nbConsultations ?? 0).toLocaleString("fr-FR")}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger className="rounded-lg p-1.5 hover:bg-muted transition-colors">

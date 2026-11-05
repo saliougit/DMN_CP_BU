@@ -206,6 +206,35 @@ def notifier_bienvenue_membre(self, user_id: str, password: str):
 
 
 @shared_task(queue="default", bind=True, max_retries=3)
+def notifier_changement_mdp(self, user_id: str, password: str):
+    """Notifie l'utilisateur que son mot de passe a été modifié par un admin."""
+    from apps.accounts.models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+    if not user.email:
+        return
+    from django.conf import settings as _s
+    login_url = getattr(_s, "FRONTEND_URL", "http://localhost") + "/connexion"
+    nom = user.get_full_name() or user.username
+    try:
+        _send(
+            subject="[DMN-BN] Votre mot de passe a été modifié",
+            template="emails/membre_nouveau_mdp.html",
+            context={
+                "nom": nom,
+                "username": user.username,
+                "password": password,
+                "login_url": login_url,
+            },
+            recipient=user.email,
+        )
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
 def notifier_approbation(self, doc_id: str):
     from .models import Document
     try:

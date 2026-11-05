@@ -89,4 +89,6 @@ export interface DashboardStats {
   totalTelechargements: number
   topFacultes: { nom: string; count: number }[]
   documentsParAnnee: { annee: number; count: number }[]
+  topTelecharges?: { id: string; titre: string; auteur: string; count: number }[]
+  topVus?: { id: string; titre: string; auteur: string; count: number }[]
 }

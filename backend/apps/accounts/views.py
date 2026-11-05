@@ -176,6 +176,9 @@ class AdminSetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
+        if membre.role == "admin" and membre.id != request.user.id:
+            return Response({"detail": "Impossible de modifier le mot de passe d'un autre administrateur."}, status=status.HTTP_403_FORBIDDEN)
+
         new_password = request.data.get("password", "")
         notify       = request.data.get("notify", True)
 
@@ -187,8 +190,8 @@ class AdminSetPasswordView(APIView):
 
         if notify and membre.email:
             try:
-                from apps.documents.tasks import notifier_bienvenue_membre
-                notifier_bienvenue_membre.delay(str(membre.id), new_password)
+                from apps.documents.tasks import notifier_changement_mdp
+                notifier_changement_mdp.delay(str(membre.id), new_password)
             except Exception:
                 pass
 

@@ -10,8 +10,11 @@ import {
   Clock,
   XCircle,
   ArrowUpRight,
+  Download,
+  Eye,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +23,7 @@ import { api } from "@/lib/api"
 import type { DashboardStats, Document } from "@/types"
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [statsData, setStatsData] = useState<DashboardStats | null>(null)
   const [recentSubs, setRecentSubs] = useState<Document[]>([])
 
@@ -214,6 +218,73 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Top téléchargés + Top vus */}
+      {((statsData?.topTelecharges?.length ?? 0) > 0 || (statsData?.topVus?.length ?? 0) > 0) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Top téléchargés */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-950">
+                  <Download className="h-3.5 w-3.5 text-purple-600" />
+                </div>
+                <CardTitle className="text-base">Top téléchargés</CardTitle>
+              </div>
+              <Link href="/gestion/documents?tri=telecharges">
+                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1">Voir tout <ArrowUpRight className="h-3 w-3" /></Button>
+              </Link>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(statsData?.topTelecharges ?? []).map((doc, i) => (
+                <div key={doc.id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/gestion/documents/${doc.id}`)}>
+                  <span className="text-xs font-bold text-muted-foreground w-4 flex-shrink-0">#{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium line-clamp-1">{doc.titre}</p>
+                    <p className="text-[10px] text-muted-foreground">{doc.auteur}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-purple-600 flex-shrink-0">
+                    <Download className="h-3 w-3" />{doc.count.toLocaleString("fr-FR")}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Top vus */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
+                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                </div>
+                <CardTitle className="text-base">Top consultés</CardTitle>
+              </div>
+              <Link href="/gestion/documents?tri=vus">
+                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1">Voir tout <ArrowUpRight className="h-3 w-3" /></Button>
+              </Link>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(statsData?.topVus ?? []).map((doc, i) => (
+                <div key={doc.id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/gestion/documents/${doc.id}`)}>
+                  <span className="text-xs font-bold text-muted-foreground w-4 flex-shrink-0">#{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium line-clamp-1">{doc.titre}</p>
+                    <p className="text-[10px] text-muted-foreground">{doc.auteur}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 flex-shrink-0">
+                    <Eye className="h-3 w-3" />{doc.count.toLocaleString("fr-FR")}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

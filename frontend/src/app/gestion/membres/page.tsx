@@ -54,8 +54,22 @@ export default function AdminMembresPage() {
   // Détail membre + set-password
   const [detailUser, setDetailUser] = useState<User | null>(null)
   const [setPwdForm, setSetPwdForm] = useState({ password: "", notify: true })
-  const [showSetPwd, setShowSetPwd] = useState(false)
+  const [showSetPwdPanel, setShowSetPwdPanel] = useState(false)
+  const [showSetPwdValue, setShowSetPwdValue] = useState(false)
   const [savingPwd, setSavingPwd] = useState(false)
+
+  function generatePassword(): string {
+    const upper  = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    const lower  = "abcdefghjkmnpqrstuvwxyz"
+    const digits = "23456789"
+    const syms   = "@#!$%"
+    const all    = upper + lower + digits + syms
+    const rand   = (s: string) => s[Math.floor(Math.random() * s.length)]
+    // Garantit au moins un de chaque catégorie
+    const required = [rand(upper), rand(lower), rand(digits), rand(syms)]
+    const rest = Array.from({ length: 8 }, () => rand(all))
+    return [...required, ...rest].sort(() => Math.random() - 0.5).join("")
+  }
 
   function loadMembers() {
     api.getMembers().then(setUsers).catch(() => {})
@@ -138,7 +152,8 @@ export default function AdminMembresPage() {
       await api.adminSetPassword(detailUser.id, setPwdForm.password, setPwdForm.notify)
       toast.success(`Mot de passe mis à jour${setPwdForm.notify ? " — email envoyé" : ""}`)
       setSetPwdForm({ password: "", notify: true })
-      setShowSetPwd(false)
+      setShowSetPwdPanel(false)
+      setShowSetPwdValue(false)
     } catch (err: any) {
       toast.error(err?.message ?? "Erreur lors de la mise à jour")
     } finally {
@@ -186,13 +201,14 @@ export default function AdminMembresPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input value={recherche} onChange={(e) => setRecherche(e.target.value)}
-          placeholder="Rechercher un membre…" className="h-9 pl-9 rounded-lg text-sm" />
+          placeholder="Rechercher un membre…" className="h-9 pl-9 rounded-lg text-sm"
+          autoComplete="off" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {paginated.map((user) => (
           <Card key={user.id} className="hover:shadow-sm transition-shadow cursor-pointer"
-            onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwd(false) }}>
+            onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <Avatar className="h-10 w-10 flex-shrink-0">
@@ -289,23 +305,40 @@ export default function AdminMembresPage() {
                       <Lock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-semibold">Changer le mot de passe</span>
                     </div>
-                    {!showSetPwd && (
+                    {!showSetPwdPanel && detailUser.role !== "admin" && (
                       <Button variant="outline" size="sm" className="text-xs h-7"
-                        onClick={() => setShowSetPwd(true)}>
+                        onClick={() => setShowSetPwdPanel(true)}>
                         Modifier
                       </Button>
                     )}
+                    {detailUser.role === "admin" && (
+                      <span className="text-[10px] text-muted-foreground italic">Non modifiable</span>
+                    )}
                   </div>
 
-                  {showSetPwd && (
+                  {showSetPwdPanel && (
                     <div className="space-y-3 rounded-lg border border-border/60 p-4 bg-muted/20">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Nouveau mot de passe</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Nouveau mot de passe</Label>
+                          <button type="button"
+                            className="text-[10px] text-primary hover:underline font-medium"
+                            onClick={() => { setSetPwdForm((p) => ({ ...p, password: generatePassword() })); setShowSetPwdValue(true) }}>
+                            ✨ Générer
+                          </button>
+                        </div>
                         <div className="relative">
-                          <Input type={showSetPwd && false ? "text" : (showSetPwd ? "password" : "password")}
+                          <Input
+                            type={showSetPwdValue ? "text" : "password"}
                             value={setPwdForm.password}
                             onChange={(e) => setSetPwdForm((p) => ({ ...p, password: e.target.value }))}
-                            placeholder="8 caractères minimum" className="h-9 text-sm pr-10" />
+                            placeholder="8 caractères minimum" className="h-9 text-sm pr-10 font-mono"
+                            autoComplete="new-password" />
+                          <button type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowSetPwdValue((v) => !v)}>
+                            {showSetPwdValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
@@ -314,7 +347,7 @@ export default function AdminMembresPage() {
                             ? <Bell className="h-4 w-4 text-primary" />
                             : <BellOff className="h-4 w-4 text-muted-foreground" />}
                           <Label className="text-xs cursor-pointer" htmlFor="notify-switch">
-                            {setPwdForm.notify ? "Notifier le membre par email" : "Ne pas notifier"}
+                            {setPwdForm.notify ? "Notifier par email" : "Ne pas notifier"}
                           </Label>
                         </div>
                         <Switch id="notify-switch" checked={setPwdForm.notify}
@@ -322,7 +355,7 @@ export default function AdminMembresPage() {
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="text-xs h-8 flex-1"
-                          onClick={() => { setShowSetPwd(false); setSetPwdForm({ password: "", notify: true }) }}
+                          onClick={() => { setShowSetPwdPanel(false); setShowSetPwdValue(false); setSetPwdForm({ password: "", notify: true }) }}
                           disabled={savingPwd}>
                           Annuler
                         </Button>
@@ -372,7 +405,8 @@ export default function AdminMembresPage() {
                 <div className="relative">
                   <Input type={showCreatePwd ? "text" : "password"} value={createForm.password}
                     onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
-                    className="h-9 text-sm pr-10" placeholder="8 caractères minimum" />
+                    className="h-9 text-sm pr-10" placeholder="8 caractères minimum"
+                    autoComplete="new-password" />
                   <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowCreatePwd((v) => !v)}>
                     {showCreatePwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

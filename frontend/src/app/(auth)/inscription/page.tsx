@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, UserPlus, Loader2, CheckCircle2 } from "lucide-react"
+import { Eye, EyeOff, UserPlus, Loader2, CheckCircle2, Mail, GraduationCap, BookOpen, Layers } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -195,10 +195,29 @@ export default function InscriptionPage() {
                   )}
                 </div>
 
-                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground">Récapitulatif</p>
-                  <p>{form.prenom} {form.nom} · {form.email}</p>
-                  <p>{faculteNom} · {filiereNom} · {niveauNom}</p>
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                      {form.prenom.charAt(0).toUpperCase()}{form.nom.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{form.prenom} {form.nom}</p>
+                      <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3 shrink-0" /> {form.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 border-t border-border pt-2.5 text-xs text-muted-foreground">
+                    <p className="flex items-center gap-1.5">
+                      <GraduationCap className="h-3.5 w-3.5 shrink-0 text-primary" /> {faculteNom}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary" /> {filiereNom}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 shrink-0 text-primary" /> {niveauNom}
+                    </p>
+                  </div>
                 </div>
               </>
             )}

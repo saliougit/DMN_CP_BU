@@ -64,6 +64,25 @@ def _send_to_many(subject: str, template: str, context: dict, recipients: list):
 
 
 @shared_task(queue="default", bind=True, max_retries=3)
+def calculer_pages(self, doc_id: str):
+    import pdfplumber
+    from .models import Document
+    try:
+        doc = Document.objects.get(id=doc_id)
+    except Document.DoesNotExist:
+        return
+    if not doc.fichier:
+        return
+    try:
+        with doc.fichier.open("rb") as f:
+            with pdfplumber.open(f) as pdf:
+                nb_pages = len(pdf.pages)
+        Document.objects.filter(pk=doc.pk).update(pages=nb_pages)
+    except Exception:
+        pass
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
 def notifier_admins_soumission(self, doc_id: str):
     from .models import Document
     try:

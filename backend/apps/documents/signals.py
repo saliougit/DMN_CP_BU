@@ -16,9 +16,11 @@ def _fire(task_name: str, *args):
 def on_document_save(sender, instance, created, **kwargs):
     doc_id = str(instance.id)
 
-    if created and instance.statut == "en_attente":
-        # Nouvelle soumission → notifier les admins
-        _fire("notifier_admins_soumission", doc_id)
+    if created:
+        _fire("calculer_pages", doc_id)
+        if instance.statut == "en_attente":
+            # Nouvelle soumission → notifier les admins
+            _fire("notifier_admins_soumission", doc_id)
 
     elif not created:
         if instance.statut == "approuve":

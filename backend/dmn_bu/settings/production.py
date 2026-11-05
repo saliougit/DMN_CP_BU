@@ -16,6 +16,31 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{host}" for host in ALLOWED_HOSTS if host not in ("localhost", "127.0.0.1")
 ]
 
+# Par défaut (DEBUG=False), Django n'envoie les erreurs 500 que par mail
+# (mail_admins) — jamais configuré ici, donc elles disparaissaient
+# silencieusement : rien dans `docker logs`. On force un handler console
+# systematique pour que toute exception serveur finisse dans les logs gunicorn.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
+
 # Fichiers uploadés → MinIO (API S3 interne au réseau Docker)
 STORAGES = {
     "default": {

@@ -6,7 +6,8 @@ import { BookOpen, LogIn, Upload, User, LogOut, ChevronDown } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { ThemeToggle } from "./theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
@@ -72,7 +73,21 @@ export function PublicNavbar() {
                   <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex items-center gap-2.5 py-1">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{user.prenom} {user.nom}</p>
+                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSoumettre} className="gap-2 text-xs">
                   <Upload className="h-3.5 w-3.5" /> Déposer un document
                 </DropdownMenuItem>
@@ -87,6 +102,7 @@ export function PublicNavbar() {
                     <BookOpen className="h-3.5 w-3.5" /> Administration
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="gap-2 text-xs text-destructive">
                   <LogOut className="h-3.5 w-3.5" /> Déconnexion
                 </DropdownMenuItem>

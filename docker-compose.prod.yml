@@ -81,10 +81,13 @@ services:
 
   # Crée le bucket (et sa policy publique en lecture) au premier démarrage -
   # MinIO ne le fait pas automatiquement. minio/mc est bloqué sur Docker Hub
-  # pour la même raison que minio/minio (voir service storage) - image
-  # Bitnami (autre éditeur, non concerné par cette restriction) en remplacement.
+  # (même raison que minio/minio, voir service storage) ; bitnami/minio-client
+  # a été retiré de Docker Hub en août 2025 (catalogue Bitnami réduit aux
+  # "Secure Images" payantes) - les anciennes images restent accessibles,
+  # gelées, sous l'organisation bitnamilegacy (pas de tag "latest", fixer
+  # une version explicite).
   storage-init:
-    image: bitnami/minio-client:latest
+    image: bitnamilegacy/minio-client:2025.7.21-debian-12-r3
     container_name: dmnbu_storage_init
     depends_on:
       storage:

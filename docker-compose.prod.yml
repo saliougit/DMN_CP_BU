@@ -52,8 +52,12 @@ services:
   # http) ; les URLs publiques renvoyées au frontend pointent vers
   # storage-bnumerique.dmnucad.com (nginx sur l'hôte, HTTPS) - voir
   # MINIO_ENDPOINT / MINIO_PUBLIC_ENDPOINT dans backend/dmn_bu/settings/production.py.
+  # minio/minio sur Docker Hub refuse le pull depuis fin 2025 (MinIO pousse
+  # vers son offre commerciale "AIStor") - ghcr.io/coollabsio/minio est un
+  # mirror communautaire actif (projet Coolify) qui recompile les sources
+  # officielles MinIO à chaque release. Même contournement que DMN-PGI.
   storage:
-    image: minio/minio:latest
+    image: ghcr.io/coollabsio/minio:latest
     container_name: dmnbu_storage
     restart: unless-stopped
     command: server /data --console-address ":9001"

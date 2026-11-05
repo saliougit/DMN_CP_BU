@@ -80,9 +80,11 @@ services:
       start_period: 10s
 
   # Crée le bucket (et sa policy publique en lecture) au premier démarrage -
-  # MinIO ne le fait pas automatiquement.
+  # MinIO ne le fait pas automatiquement. minio/mc est bloqué sur Docker Hub
+  # pour la même raison que minio/minio (voir service storage) - image
+  # Bitnami (autre éditeur, non concerné par cette restriction) en remplacement.
   storage-init:
-    image: minio/mc:latest
+    image: bitnami/minio-client:latest
     container_name: dmnbu_storage_init
     depends_on:
       storage:

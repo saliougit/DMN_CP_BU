@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
 import type { Faculte, Niveau } from "@/types"
+import { TYPE_LABELS } from "@/lib/document-types"
 
 // Format: PrenomNom__ANNEE__TYPE__CODE_FAC__NomFiliere.pdf
 const TYPE_MAP: Record<string, string> = {
@@ -30,6 +31,7 @@ interface FileEntry {
   id: string
   file: File
   titre: string
+  titreAuto: boolean
   annee: number
   parsed: boolean
   status: "pending" | "uploading" | "done" | "error"
@@ -39,12 +41,12 @@ interface FileEntry {
 function parseFilename(
   name: string,
   facultes: Faculte[]
-): { titre?: string; type?: string; annee?: number; faculteId?: string; filiereId?: string; parsed: boolean } {
+): { type?: string; annee?: number; faculteId?: string; filiereId?: string; parsed: boolean } {
   const base = name.replace(/\.pdf$/i, "")
   const parts = base.split("__")
   if (parts.length < 3) return { parsed: false }
 
-  const [auteurRaw, anneeRaw, typeRaw, codeFac, nomFiliere] = parts
+  const [, anneeRaw, typeRaw, codeFac, nomFiliere] = parts
   const annee = Number(anneeRaw)
   const type = TYPE_MAP[typeRaw?.toLowerCase?.() ?? ""]
   if (!type || !annee || annee < 1900 || annee > 2100) return { parsed: false }
@@ -59,23 +61,7 @@ function parseFilename(
     : null
   const filiereId = fil?.id ?? ""
 
-  const typeLabel: Record<string, string> = {
-    memoire_master: "Mémoire de Master",
-    memoire_licence: "Mémoire de Licence",
-    these_doctorat: "Thèse de Doctorat",
-    article: "Article",
-    rapport: "Rapport",
-  }
-  const auteurPretty = auteurRaw.replace(/([a-z])([A-Z])/g, "$1 $2")
-
-  return {
-    parsed: true,
-    type,
-    annee,
-    faculteId,
-    filiereId,
-    titre: `${typeLabel[type] ?? type} de ${auteurPretty} (${annee})`,
-  }
+  return { parsed: true, type, annee, faculteId, filiereId }
 }
 
 export default function SoumettrePage() {
@@ -103,6 +89,12 @@ export default function SoumettrePage() {
     [facultes, form.faculteId]
   )
 
+  function computeTitre(type: string, annee: number) {
+    const typeLabel = TYPE_LABELS[type] ?? type
+    const auteur = user ? `${user.prenom} ${user.nom}`.trim() : ""
+    return [auteur ? `${typeLabel} — ${auteur}` : typeLabel, annee].filter(Boolean).join(" | ")
+  }
+
   function addFiles(rawFiles: FileList | File[]) {
     const arr = Array.from(rawFiles)
     const pdfs = arr.filter((f) => f.type === "application/pdf" || f.name.endsWith(".pdf"))
@@ -118,11 +110,14 @@ export default function SoumettrePage() {
           ...(parsed.faculteId ? { faculteId: parsed.faculteId, filiereId: parsed.filiereId ?? "" } : {}),
         }))
       }
+      const type = parsed.type ?? form.type
+      const annee = parsed.annee ?? new Date().getFullYear()
       return {
         id: crypto.randomUUID(),
         file: f,
-        titre: parsed.titre ?? "",
-        annee: parsed.annee ?? new Date().getFullYear(),
+        titre: computeTitre(type, annee),
+        titreAuto: true,
+        annee,
         parsed: parsed.parsed,
         status: "pending",
       }
@@ -131,7 +126,7 @@ export default function SoumettrePage() {
     if (newEntries.length > 0) {
       setEntries((prev) => [...prev, ...newEntries])
       if (newEntries.some((e) => e.parsed)) {
-        toast.success("Fichier(s) analysé(s)", { description: "Les titres ont été pré-remplis depuis les noms de fichiers." })
+        toast.success("Fichier(s) analysé(s)", { description: "Type, faculté et filière ont été pré-remplis depuis les noms de fichiers." })
       }
     }
   }
@@ -146,7 +141,17 @@ export default function SoumettrePage() {
   }
 
   function updateEntry(id: string, field: "titre" | "annee", value: string | number) {
-    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, [field]: value } : e))
+    setEntries((prev) => prev.map((e) => {
+      if (e.id !== id) return e
+      if (field === "titre") return { ...e, titre: value as string, titreAuto: false }
+      const annee = value as number
+      return { ...e, annee, titre: e.titreAuto ? computeTitre(form.type, annee) : e.titre }
+    }))
+  }
+
+  function updateType(type: string) {
+    setForm((f) => ({ ...f, type }))
+    setEntries((prev) => prev.map((e) => e.titreAuto ? { ...e, titre: computeTitre(type, e.annee) } : e))
   }
 
   async function handleSubmit(evt: React.FormEvent) {
@@ -216,9 +221,10 @@ export default function SoumettrePage() {
 
         {/* Format hint */}
         <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground mb-1">Format de nom recommandé pour pré-remplissage automatique :</p>
+          <p className="font-medium text-foreground mb-1">Astuce (optionnelle) : renommez le fichier PDF avant de l&apos;envoyer pour pré-remplir Type / Faculté / Filière</p>
           <code className="text-primary text-[11px]">PrenomNom__ANNEE__TYPE__CODE_FAC__NomFiliere.pdf</code>
           <p className="mt-1">Ex : <code className="text-primary">SaliouNiane__2026__master__FST__Informatique.pdf</code></p>
+          <p className="mt-1">Le titre, lui, reste toujours à vérifier/modifier ci-dessous — ce champ n&apos;a pas besoin de ce format.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -329,7 +335,7 @@ export default function SoumettrePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Type <span className="text-destructive">*</span></Label>
-                  <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                  <select value={form.type} onChange={(e) => updateType(e.target.value)}
                     className={selectCls}>
                     <option value="memoire_licence">Mémoire de Licence</option>
                     <option value="memoire_master">Mémoire de Master</option>

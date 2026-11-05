@@ -9,8 +9,12 @@ class RoleChoices(models.TextChoices):
 
 
 class User(AbstractUser):
-    id   = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    role = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.MEMBRE)
+    id    = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # AbstractUser.email n'est pas unique par défaut — or EmailBackend
+    # authentifie par User.objects.get(email=...), qui plante (500) des
+    # qu'un doublon existe.
+    email = models.EmailField("email address", unique=True, blank=True)
+    role  = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.MEMBRE)
 
     telephone     = models.CharField(max_length=20, blank=True)
     photo         = models.ImageField(upload_to="photos/", null=True, blank=True)

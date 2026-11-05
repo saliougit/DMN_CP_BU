@@ -1,0 +1,164 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEPLOY_HOST: "164.68.98.73"
+  DEPLOY_PORT: "22"
+  DEPLOY_USER: "root"
+  DEPLOY_PATH: "/opt/dmn-bu"
+
+concurrency:
+  group: dmnbu-production
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker-compose.prod.yml'
+              - 'deploy/ci/**'
+              - '.github/workflows/deploy.yml'
+            frontend:
+              - 'frontend/**'
+              - 'docker-compose.prod.yml'
+              - 'deploy/ci/**'
+              - '.github/workflows/deploy.yml'
+
+  backend-validate:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - working-directory: backend
+        run: |
+          python -m compileall -q .
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+        env:
+          DJANGO_SETTINGS_MODULE: dmn_bu.settings.production
+          DJANGO_SECRET_KEY: ci-only-dummy-key
+          ALLOWED_HOSTS: localhost
+
+  frontend-validate:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://api-bnumerique.dmnucad.com/api
+
+  deploy-backend:
+    needs: [changes, backend-validate]
+    if: needs.changes.outputs.backend == 'true' && !cancelled() && needs.backend-validate.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: production/api
+      url: https://api-bnumerique.dmnucad.com
+    steps:
+      - name: Install SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Régénérer .env.production et déployer
+        run: |
+          cat > env.production.generated <<ENVEOF
+          DJANGO_SETTINGS_MODULE=dmn_bu.settings.production
+          DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+          ALLOWED_HOSTS=api-bnumerique.dmnucad.com,bnumerique.dmnucad.com
+          CORS_ALLOWED_ORIGINS=https://bnumerique.dmnucad.com
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_HOST=db
+          DB_PORT=5432
+          REDIS_URL=redis://redis:6379/0
+          MEILI_URL=http://search:7700
+          MEILI_MASTER_KEY=${{ secrets.MEILI_MASTER_KEY }}
+          SEND_REAL_EMAILS=True
+          EMAIL_HOST=smtp.hostinger.com
+          EMAIL_PORT=465
+          EMAIL_USE_TLS=False
+          EMAIL_USE_SSL=True
+          EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}
+          DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }}
+          FRONTEND_URL=https://bnumerique.dmnucad.com
+          MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}
+          MINIO_BUCKET=dmn-bu-documents
+          MINIO_ENDPOINT=storage:9000
+          MINIO_PUBLIC_ENDPOINT=storage-bnumerique.dmnucad.com
+          NEXT_PUBLIC_API_URL=https://api-bnumerique.dmnucad.com/api
+          ENVEOF
+          scp -P "$DEPLOY_PORT" -o StrictHostKeyChecking=yes env.production.generated "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/.env.production"
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+            cd '$DEPLOY_PATH' &&
+            git fetch origin main &&
+            git checkout -f main &&
+            git reset --hard origin/main &&
+            chmod +x deploy/ci/deploy-service.sh &&
+            ./deploy/ci/deploy-service.sh backend
+          "
+
+  deploy-frontend:
+    needs: [changes, frontend-validate, deploy-backend]
+    if: |
+      needs.changes.outputs.frontend == 'true' && !cancelled() &&
+      needs.frontend-validate.result == 'success' &&
+      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: production/frontend
+      url: https://bnumerique.dmnucad.com
+    steps:
+      - name: Install SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Déployer le frontend
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+            cd '$DEPLOY_PATH' &&
+            git fetch origin main &&
+            git checkout -f main &&
+            git reset --hard origin/main &&
+            chmod +x deploy/ci/deploy-service.sh &&
+            ./deploy/ci/deploy-service.sh frontend
+          "

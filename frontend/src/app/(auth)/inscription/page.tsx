@@ -50,6 +50,10 @@ export default function InscriptionPage() {
     [facultes, form.faculte]
   )
 
+  const faculteNom = facultes.find((f) => f.id === form.faculte)?.nom ?? form.faculte
+  const filiereNom = filieresDispo.find((fi) => fi.id === form.filiere)?.nom ?? form.filiere
+  const niveauNom = niveaux.find((n) => n.id === form.niveau)?.nom ?? form.niveau
+
   const etape0Valide = form.nom && form.prenom && form.email
   const etape1Valide = form.faculte && form.filiere && form.niveau
   const etape2Valide = form.password.length >= 8 && form.password === form.confirm
@@ -194,7 +198,7 @@ export default function InscriptionPage() {
                 <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground">Récapitulatif</p>
                   <p>{form.prenom} {form.nom} · {form.email}</p>
-                  <p>{form.faculte} · {form.filiere} · {form.niveau}</p>
+                  <p>{faculteNom} · {filiereNom} · {niveauNom}</p>
                 </div>
               </>
             )}

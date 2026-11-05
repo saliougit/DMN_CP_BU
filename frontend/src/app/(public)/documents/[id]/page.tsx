@@ -83,11 +83,11 @@ export default function DocumentDetailPage() {
         Retour
       </button>
 
-      <div className="flex flex-col lg:flex-row gap-6" style={{ minHeight: "calc(100vh - 10rem)" }}>
+      <div className="flex flex-col lg:flex-row gap-6 lg:min-h-[calc(100vh-10rem)]">
         {/* Panneau gauche : Métadonnées compactes */}
         <aside className="lg:w-[360px] flex-shrink-0 order-2 lg:order-1">
-          <div className="sticky top-4 rounded-xl border border-border bg-card flex flex-col" style={{ height: "calc(100vh - 10rem)" }}>
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="rounded-xl border border-border bg-card flex flex-col lg:sticky lg:top-4 lg:h-[calc(100vh-10rem)]">
+            <div className="flex-1 lg:overflow-y-auto p-5 space-y-5">
               {/* En-tête */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -175,8 +175,7 @@ export default function DocumentDetailPage() {
 
         {/* Panneau droit : PDF Viewer */}
         <div className="flex-1 min-w-0 order-1 lg:order-2">
-          <div className="sticky top-4 rounded-xl border border-border bg-card overflow-hidden"
-            style={{ height: "calc(100vh - 10rem)" }}>
+          <div className="rounded-xl border border-border bg-card overflow-hidden h-[70vh] lg:sticky lg:top-4 lg:h-[calc(100vh-10rem)]">
             <PdfViewer
               fileUrl={doc.fichierUrl}
               fileName={doc.titre}

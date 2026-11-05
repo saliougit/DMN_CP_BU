@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { api } from "@/lib/api"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
@@ -42,10 +43,18 @@ function groupThemeMatches(query: string) {
 }
 
 function DocumentCard({ doc, selected, onSelect }: { doc: Document; selected: boolean; onSelect: () => void }) {
+  const router = useRouter()
+  function handleClick() {
+    onSelect()
+    // Pas de colonne d'aperçu en dessous de xl (pas la place) — on va direct à la fiche.
+    if (typeof window !== "undefined" && window.innerWidth < 1280) {
+      router.push(`/documents/${doc.id}`)
+    }
+  }
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={handleClick}
       className={`w-full text-left group rounded-xl border p-4 space-y-2.5 transition-all cursor-pointer ${
         selected
           ? "border-primary bg-primary/5 shadow-md"
@@ -167,6 +176,121 @@ function MetaItem({ icon: Icon, label, value }: { icon: React.ElementType; label
   )
 }
 
+interface FiltersContentProps {
+  filtreType: string; setFiltreType: (v: string) => void
+  filtreFaculte: string; setFiltreFaculte: (v: string) => void
+  filtreFiliere: string; setFiltreFiliere: (v: string) => void
+  filtreNiveau: string; setFiltreNiveau: (v: string) => void
+  filtreAnnee: string; setFiltreAnnee: (v: string) => void
+  facultes: Faculte[]; niveaux: Niveau[]; allFilieres: (Faculte["filieres"][number] & { faculteNom: string })[]
+  hasFiltres: boolean; resetFiltres: () => void
+}
+
+function FiltersContent({
+  filtreType, setFiltreType, filtreFaculte, setFiltreFaculte, filtreFiliere, setFiltreFiliere,
+  filtreNiveau, setFiltreNiveau, filtreAnnee, setFiltreAnnee, facultes, niveaux, allFilieres,
+  hasFiltres, resetFiltres,
+}: FiltersContentProps) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Filtres</span>
+        </div>
+        {hasFiltres && <button onClick={resetFiltres} className="text-xs text-primary hover:underline">Effacer</button>}
+      </div>
+      <Separator />
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</p>
+        <Select value={filtreType || "__all__"} onValueChange={(v) => setFiltreType(v && v !== "__all__" ? v : "")}>
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
+            {Object.entries(TYPE_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Faculté</p>
+        <Select
+          value={filtreFaculte || "__all__"}
+          onValueChange={(v) => {
+            if (!v || v === "__all__") { setFiltreFaculte(""); setFiltreFiliere("") }
+            else { setFiltreFaculte(v); setFiltreFiliere("") }
+          }}
+        >
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
+            {facultes.map((f) => (
+              <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filière</p>
+        <Select value={filtreFiliere || "__all__"} onValueChange={(v) => setFiltreFiliere(v && v !== "__all__" ? v : "")}>
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
+            {(filtreFaculte
+              ? allFilieres.filter((f) => f.faculteNom === filtreFaculte)
+              : allFilieres
+            ).map((f) => (
+              <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Separator />
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Niveau</p>
+        <Select value={filtreNiveau || "__all__"} onValueChange={(v) => setFiltreNiveau(v && v !== "__all__" ? v : "")}>
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
+            {niveaux.map((n) => (
+              <SelectItem key={n.id} value={n.nom} className="text-xs">{n.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</p>
+        <Select value={filtreAnnee || "__all__"} onValueChange={(v) => setFiltreAnnee(v && v !== "__all__" ? v : "")}>
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
+            {ANNEES_FIXES.map((a) => (
+              <SelectItem key={a} value={String(a)} className="text-xs">{a}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+
 function DocumentCardSkeleton() {
   return (
     <div className="rounded-xl border border-border p-4 space-y-3 animate-pulse">
@@ -200,6 +324,7 @@ export function SearchClient() {
   const [refreshing, setRefreshing] = useState(false)
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -299,116 +424,50 @@ export function SearchClient() {
         )}
       </div>
 
-      {/* 3 colonnes */}
-      <div className="flex gap-6" style={{ height: "calc(100vh - 12rem)" }}>
-        {/* Colonne 1 : Filtres */}
-        <aside className="w-56 flex-shrink-0">
-          <div className="sticky top-0 rounded-xl border border-border bg-card p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">Filtres</span>
-              </div>
-              {hasFiltres && <button onClick={resetFiltres} className="text-xs text-primary hover:underline">Effacer</button>}
-            </div>
-            <Separator />
+      {/* Filtres : bouton + tiroir sur mobile/tablette */}
+      <div className="mb-4 lg:hidden">
+        <Button variant="outline" size="sm" className="gap-2 text-xs" onClick={() => setFilterSheetOpen(true)}>
+          <SlidersHorizontal className="h-3.5 w-3.5" /> Filtres
+          {hasFiltres && <Badge className="h-4 px-1.5 text-[10px]">{[filtreType, filtreFaculte, filtreFiliere, filtreNiveau, filtreAnnee].filter(Boolean).length}</Badge>}
+        </Button>
+      </div>
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent side="left" className="w-72 overflow-y-auto p-4">
+          <SheetHeader className="p-0 mb-2">
+            <SheetTitle>Filtres</SheetTitle>
+          </SheetHeader>
+          <FiltersContent
+            filtreType={filtreType} setFiltreType={setFiltreType}
+            filtreFaculte={filtreFaculte} setFiltreFaculte={setFiltreFaculte}
+            filtreFiliere={filtreFiliere} setFiltreFiliere={setFiltreFiliere}
+            filtreNiveau={filtreNiveau} setFiltreNiveau={setFiltreNiveau}
+            filtreAnnee={filtreAnnee} setFiltreAnnee={setFiltreAnnee}
+            facultes={facultes} niveaux={niveaux} allFilieres={allFilieres}
+            hasFiltres={hasFiltres} resetFiltres={resetFiltres}
+          />
+        </SheetContent>
+      </Sheet>
 
-            {/* Type */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</p>
-              <Select value={filtreType || "__all__"} onValueChange={(v) => setFiltreType(v && v !== "__all__" ? v : "")}>
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
-                  {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Separator />
-
-            {/* Faculté */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Faculté</p>
-              <Select
-                value={filtreFaculte || "__all__"}
-                onValueChange={(v) => {
-                  if (!v || v === "__all__") { setFiltreFaculte(""); setFiltreFiliere("") }
-                  else { setFiltreFaculte(v); setFiltreFiliere("") }
-                }}
-              >
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
-                  {facultes.map((f) => (
-                    <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filière (cascade de la faculté) */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filière</p>
-              <Select value={filtreFiliere || "__all__"} onValueChange={(v) => setFiltreFiliere(v && v !== "__all__" ? v : "")}>
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
-                  {(filtreFaculte
-                    ? allFilieres.filter((f) => f.faculteNom === filtreFaculte)
-                    : allFilieres
-                  ).map((f) => (
-                    <SelectItem key={f.id} value={f.nom} className="text-xs">{f.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Separator />
-
-            {/* Niveau */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Niveau</p>
-              <Select value={filtreNiveau || "__all__"} onValueChange={(v) => setFiltreNiveau(v && v !== "__all__" ? v : "")}>
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
-                  {niveaux.map((n) => (
-                    <SelectItem key={n.id} value={n.nom} className="text-xs">{n.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Année */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</p>
-              <Select value={filtreAnnee || "__all__"} onValueChange={(v) => setFiltreAnnee(v && v !== "__all__" ? v : "")}>
-                <SelectTrigger className="w-full h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
-                  {ANNEES_FIXES.map((a) => (
-                    <SelectItem key={a} value={String(a)} className="text-xs">{a}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* 3 colonnes (empilées sous lg) */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-12rem)]">
+        {/* Colonne 1 : Filtres (desktop uniquement) */}
+        <aside className="hidden lg:block w-56 flex-shrink-0">
+          <div className="sticky top-0 rounded-xl border border-border bg-card p-4">
+            <FiltersContent
+              filtreType={filtreType} setFiltreType={setFiltreType}
+              filtreFaculte={filtreFaculte} setFiltreFaculte={setFiltreFaculte}
+              filtreFiliere={filtreFiliere} setFiltreFiliere={setFiltreFiliere}
+              filtreNiveau={filtreNiveau} setFiltreNiveau={setFiltreNiveau}
+              filtreAnnee={filtreAnnee} setFiltreAnnee={setFiltreAnnee}
+              facultes={facultes} niveaux={niveaux} allFilieres={allFilieres}
+              hasFiltres={hasFiltres} resetFiltres={resetFiltres}
+            />
           </div>
         </aside>
 
         {/* Colonne 2 : Résultats */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="mb-3 flex items-center gap-2 flex-shrink-0">
+          <div className="mb-3 flex items-center gap-2 flex-wrap flex-shrink-0">
             {loading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />

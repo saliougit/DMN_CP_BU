@@ -44,14 +44,15 @@ export function PublicNavbar() {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="flex items-center gap-1">
           <button
             onClick={handleSoumettre}
-            className="relative inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-primary/40 hover:shadow-lg hover:scale-[1.04] active:scale-[0.97]"
+            aria-label="Déposer un document"
+            className="relative inline-flex items-center gap-2 rounded-full bg-primary px-3 sm:px-5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:shadow-primary/40 hover:shadow-lg hover:scale-[1.04] active:scale-[0.97]"
           >
             <span className="absolute inset-0 rounded-full animate-ping bg-primary/30 opacity-0 group-hover:opacity-100" />
             <Upload className="h-3.5 w-3.5" />
-            Déposer un document
+            <span className="hidden sm:inline">Déposer un document</span>
           </button>
         </nav>
 
@@ -72,6 +73,9 @@ export function PublicNavbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleSoumettre} className="gap-2 text-xs">
+                  <Upload className="h-3.5 w-3.5" /> Déposer un document
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push("/profil")} className="gap-2 text-xs">
                   <User className="h-3.5 w-3.5" /> Mon profil
                 </DropdownMenuItem>

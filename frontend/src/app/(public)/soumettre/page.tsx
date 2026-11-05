@@ -332,7 +332,7 @@ export default function SoumettrePage() {
 
           <Card>
             <CardContent className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Type <span className="text-destructive">*</span></Label>
                   <select value={form.type} onChange={(e) => updateType(e.target.value)}
@@ -369,12 +369,12 @@ export default function SoumettrePage() {
                     {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                   </select>
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Directeur de mémoire / Encadrant (optionnel)</Label>
                   <Input value={form.directeur} onChange={(e) => setForm((f) => ({ ...f, directeur: e.target.value }))}
                     placeholder="Prof. Nom et prénom" className="h-10 text-sm" />
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Résumé (optionnel)</Label>
                   <Textarea value={form.resume} onChange={(e) => setForm((f) => ({ ...f, resume: e.target.value }))}
                     placeholder="Résumé du document (quelques phrases)" className="text-sm resize-none" rows={3} />

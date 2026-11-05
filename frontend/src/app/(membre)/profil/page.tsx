@@ -197,7 +197,7 @@ export default function ProfilPage() {
                 </div>
 
                 {editing ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Prénom</Label>
                       <Input value={form.prenom} onChange={(e) => setForm((f) => ({ ...f, prenom: e.target.value }))} className="h-9 text-sm" />
@@ -224,7 +224,7 @@ export default function ProfilPage() {
                         {filieresDispo.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                       </select>
                     </div>
-                    <div className="space-y-1.5 col-span-2">
+                    <div className="space-y-1.5 sm:col-span-2">
                       <Label className="text-xs text-muted-foreground">Niveau</Label>
                       <select value={form.niveauId}
                         onChange={(e) => setForm((f) => ({ ...f, niveauId: e.target.value }))}
@@ -233,7 +233,7 @@ export default function ProfilPage() {
                         {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                       </select>
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <Button size="sm" className="w-full gap-2 bg-primary hover:bg-primary/90" onClick={handleSave} disabled={saving}>
                         {saving
                           ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> Enregistrement…</>
@@ -242,10 +242,10 @@ export default function ProfilPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                     <ProfileField icon={User}         label="Prénom"   value={user.prenom || "—"} />
                     <ProfileField icon={User}         label="Nom"      value={user.nom    || "—"} />
-                    <ProfileField icon={Mail}         label="Email"    value={user.email} className="col-span-2" />
+                    <ProfileField icon={Mail}         label="Email"    value={user.email} className="sm:col-span-2" />
                     <ProfileField icon={BookOpen}      label="Faculté"  value={user.faculte  ?? "Non renseigné"} />
                     <ProfileField icon={BookOpen}     label="Filière"  value={user.filiere  ?? "Non renseigné"} />
                     <ProfileField icon={Layers}       label="Niveau"   value={user.niveau   ?? "Non renseigné"} />

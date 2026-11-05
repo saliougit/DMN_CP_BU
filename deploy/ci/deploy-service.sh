@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Appelé depuis .github/workflows/deploy.yml (jobs deploy-backend /
+# deploy-frontend), sur le VPS, une fois le code mis à jour (git reset --hard).
 set -Eeuo pipefail
 
 SERVICE="${1:-}"

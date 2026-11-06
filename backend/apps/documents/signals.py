@@ -1,7 +1,11 @@
+import logging
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import Document
 from . import search
+
+logger = logging.getLogger(__name__)
 
 
 def _fire(task_name: str, *args):
@@ -9,7 +13,10 @@ def _fire(task_name: str, *args):
         from . import tasks
         getattr(tasks, task_name).delay(*args)
     except Exception:
-        pass  # Celery/Redis non disponible (ex: manage.py shell, tests)
+        # Celery/Redis non disponible (ex: manage.py shell, tests) — ne doit
+        # jamais faire planter la requete, mais ne doit pas non plus
+        # disparaitre sans trace (voir incident redis-py/kombu non detecte).
+        logger.exception("Echec de mise en file de la tache Celery '%s'", task_name)
 
 
 @receiver(post_save, sender=Document)

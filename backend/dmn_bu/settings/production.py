@@ -39,6 +39,14 @@ LOGGING = {
             "propagate": False,
         },
     },
+    # Toute erreur loggee par le code applicatif (apps.*) passe par ici —
+    # sans ca, un logger.exception() dans une app ne remonte nulle part
+    # (root logger non configure = silence, hors cas particulier de
+    # logging.lastResort qui ne couvre pas tous les contextes gunicorn).
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
 }
 
 # Fichiers uploadés → MinIO (API S3 interne au réseau Docker)

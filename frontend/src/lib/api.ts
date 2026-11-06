@@ -262,7 +262,7 @@ export const api = {
 
   // Tracking téléchargement — retourne l'URL MinIO du fichier
   downloadDocument: (id: string): Promise<{ url: string }> =>
-    fetchApi<{ url: string }>(`/documents/${id}/download/`),
+    fetchApi<{ url: string }>(`/documents/${id}/download/`, {}, true),
 
   // Profil — mise à jour
   updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; niveau: string; telephone: string }>): Promise<User> =>

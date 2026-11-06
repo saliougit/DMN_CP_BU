@@ -128,6 +128,10 @@
   html {
     @apply font-sans;
   }
+  p {
+    text-align: justify;
+    text-wrap: pretty;
+  }
 }
 
 .hero-pattern {

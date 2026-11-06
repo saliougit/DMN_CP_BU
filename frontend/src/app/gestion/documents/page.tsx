@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Search, FileText, Download, Trash2, Eye, MoreHorizontal, RefreshCw,
-  Upload, X, Loader2, ArrowUpDown, ArrowDown
+  Upload, X, Loader2, ArrowUpDown, ArrowDown, CheckCircle2, AlertCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -41,6 +41,8 @@ interface FileEntry {
   directeur: string
   resume: string
   parsed: boolean // true si le nom a été parsé avec succès
+  status: "pending" | "uploading" | "done" | "error"
+  error?: string
 }
 
 const TYPE_MAP: Record<string, string> = {
@@ -110,6 +112,7 @@ export default function AdminDocumentsPage() {
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [bulk, setBulk] = useState({ type: "memoire_master", faculte: "", filiere: "", niveau: "", annee: new Date().getFullYear(), directeur: "" })
 
   function loadDocs() {
     api.getDocumentsAdmin({ statut: "approuve" }).then(setDocs).catch(() => {})
@@ -167,6 +170,7 @@ export default function AdminDocumentsPage() {
           directeur: "",
           resume: "",
           parsed: parsed.parsed ?? false,
+          status: "pending",
         }
       })
     if (entries.length === 0) {
@@ -198,8 +202,11 @@ export default function AdminDocumentsPage() {
       return
     }
     setSubmitting(true)
-    try {
-      for (const entry of files) {
+    let successCount = 0
+
+    for (const entry of files) {
+      setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "uploading" } : f))
+      try {
         const fd = new FormData()
         fd.append("titre", entry.titre)
         fd.append("auteur", entry.auteur)
@@ -212,19 +219,33 @@ export default function AdminDocumentsPage() {
         if (entry.resume) fd.append("resume", entry.resume)
         fd.append("fichier", entry.file)
         await api.uploadDocument(fd)
+        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "done" } : f))
+        successCount++
+      } catch (err: any) {
+        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "error", error: err?.message ?? "Erreur" } : f))
       }
-      toast.success(`${files.length} document(s) publié(s) dans le catalogue`)
+    }
+
+    setSubmitting(false)
+    loadDocs()
+
+    if (successCount === files.length) {
+      toast.success(`${successCount} document(s) publié(s) dans le catalogue`)
       setSheetOpen(false)
       resetForm()
-      loadDocs()
-    } catch (err: any) {
-      toast.error("Erreur lors de la publication", { description: err?.message })
-    } finally {
-      setSubmitting(false)
+    } else if (successCount > 0) {
+      // On retire les documents déjà publiés : seuls les échecs restent à
+      // corriger/relancer, pas de republication en double au prochain essai.
+      setFiles((prev) => prev.filter((f) => f.status !== "done"))
+      toast.warning(`${successCount}/${files.length} documents publiés`, {
+        description: "Les autres ont échoué — corrigez si besoin et relancez la publication.",
+      })
+    } else {
+      toast.error("Échec de la publication — vérifiez les erreurs sur chaque fichier")
     }
   }
 
-  function computeTitre(entry: FileEntry): string {
+  function computeTitre(entry: Pick<FileEntry, "type" | "auteur" | "annee">): string {
     const typeLabel = TYPE_LABELS[entry.type] ?? entry.type ?? ""
     const parts = []
     if (entry.auteur && typeLabel) parts.push(`${typeLabel} — ${entry.auteur}`)
@@ -250,6 +271,32 @@ export default function AdminDocumentsPage() {
 
   const filieres = (faculteId: string) =>
     facultes.find((f) => f.id === faculteId)?.filieres ?? []
+
+  /** Applique les champs communs (bandeau "Appliquer a tous") a chaque fichier
+   * en attente — evite de ressaisir Faculte/Filiere/Niveau/Type/Annee sur
+   * chacun quand un lot partage la meme classification (cas frequent a
+   * l'import d'une centaine de documents). */
+  function applyBulkToAll() {
+    if (!bulk.faculte || !bulk.niveau) {
+      toast.error("Choisissez au moins une faculté et un niveau avant d'appliquer")
+      return
+    }
+    setFiles((prev) => prev.map((f) => {
+      if (f.status !== "pending" && f.status !== "error") return f
+      const updated = {
+        ...f,
+        type: bulk.type,
+        faculte: bulk.faculte,
+        filiere: bulk.filiere,
+        niveau: bulk.niveau,
+        annee: bulk.annee,
+        directeur: bulk.directeur || f.directeur,
+      }
+      updated.titre = computeTitre(updated)
+      return updated
+    }))
+    toast.success("Champs communs appliqués à tous les fichiers en attente")
+  }
 
   return (
     <div className="space-y-6">
@@ -407,42 +454,98 @@ export default function AdminDocumentsPage() {
                     onChange={(e) => { if (e.target.files && e.target.files.length > 0) addFiles(e.target.files) }} />
                 </div>
 
+                {files.length > 1 && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-primary">
+                      Classification commune — pratique pour un import en lot (ex : toute une promotion)
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <select value={bulk.type} onChange={(e) => setBulk((b) => ({ ...b, type: e.target.value }))}
+                        className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                        {Object.entries(TYPE_LABELS).map(([v, l]) => (<option key={v} value={v}>{l}</option>))}
+                      </select>
+                      <select value={bulk.faculte}
+                        onChange={(e) => setBulk((b) => ({ ...b, faculte: e.target.value, filiere: "" }))}
+                        className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                        <option value="">Faculté</option>
+                        {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
+                      </select>
+                      <select value={bulk.filiere} onChange={(e) => setBulk((b) => ({ ...b, filiere: e.target.value }))}
+                        disabled={!bulk.faculte}
+                        className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
+                        <option value="">Filière</option>
+                        {filieres(bulk.faculte).map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
+                      </select>
+                      <select value={bulk.niveau} onChange={(e) => setBulk((b) => ({ ...b, niveau: e.target.value }))}
+                        className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                        <option value="">Niveau</option>
+                        {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
+                      </select>
+                      <Input type="number" value={bulk.annee}
+                        onChange={(e) => setBulk((b) => ({ ...b, annee: Number(e.target.value) }))}
+                        className="h-8 text-xs" placeholder="Année" />
+                      <Input value={bulk.directeur}
+                        onChange={(e) => setBulk((b) => ({ ...b, directeur: e.target.value }))}
+                        className="h-8 text-xs" placeholder="Directeur (optionnel)" />
+                    </div>
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5 text-xs h-8 w-full"
+                      onClick={applyBulkToAll}>
+                      Appliquer à tous les fichiers en attente
+                    </Button>
+                  </div>
+                )}
+
                 {files.map((entry) => {
                   const fac = filieres(entry.faculte)
+                  const locked = entry.status === "uploading" || entry.status === "done"
                   return (
-                    <div key={entry.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                    <div key={entry.id} className={`rounded-xl border p-4 space-y-3 ${
+                      entry.status === "done" ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/30" :
+                      entry.status === "error" ? "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30" :
+                      entry.status === "uploading" ? "border-primary/40 bg-primary/5" :
+                      "border-border bg-card"
+                    }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                          {entry.status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />}
+                          {entry.status === "error" && <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />}
+                          {entry.status === "uploading" && <Loader2 className="h-4 w-4 text-primary animate-spin flex-shrink-0" />}
+                          {entry.status === "pending" && <FileText className="h-4 w-4 text-primary flex-shrink-0" />}
                           <span className="text-xs font-medium truncate">{entry.file.name}</span>
                           <Badge variant="outline" className="text-[9px]">{(entry.file.size / 1024 / 1024).toFixed(1)} Mo</Badge>
                           {entry.parsed
                             ? <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Auto-parsé</Badge>
                             : <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300">À compléter</Badge>}
                         </div>
-                        <button onClick={() => removeFile(entry.id)}
-                          className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                        {!locked && (
+                          <button onClick={() => removeFile(entry.id)}
+                            className="rounded-full p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+
+                      {entry.status === "error" && entry.error && (
+                        <p className="text-xs text-red-600 dark:text-red-400">{entry.error}</p>
+                      )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-2 space-y-1">
                           <Label className="text-[10px]">Titre</Label>
-                          <Input value={entry.titre}
+                          <Input value={entry.titre} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "titre", e.target.value)}
                             className="h-8 text-xs" placeholder="Titre du document" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px]">Auteur</Label>
-                          <Input value={entry.auteur}
+                          <Input value={entry.auteur} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "auteur", e.target.value)}
                             className="h-8 text-xs" placeholder="Nom et prénom" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px]">Type</Label>
-                          <select value={entry.type} onChange={(e) => updateFile(entry.id, "type", e.target.value)}
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                          <select value={entry.type} disabled={locked} onChange={(e) => updateFile(entry.id, "type", e.target.value)}
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="memoire_licence">Mémoire Licence</option>
                             <option value="memoire_master">Mémoire Master</option>
                             <option value="these_doctorat">Thèse Doctorat</option>
@@ -452,9 +555,9 @@ export default function AdminDocumentsPage() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px]">Faculté</Label>
-                          <select value={entry.faculte}
+                          <select value={entry.faculte} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "faculte", e.target.value)}
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
                             {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                           </select>
@@ -463,7 +566,7 @@ export default function AdminDocumentsPage() {
                           <Label className="text-[10px]">Filière</Label>
                           <select value={entry.filiere}
                             onChange={(e) => updateFile(entry.id, "filiere", e.target.value)}
-                            disabled={!entry.faculte}
+                            disabled={locked || !entry.faculte}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
                             {fac.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
@@ -473,7 +576,7 @@ export default function AdminDocumentsPage() {
                           <Label className="text-[10px]">Niveau</Label>
                           <select value={entry.niveau}
                             onChange={(e) => updateFile(entry.id, "niveau", e.target.value)}
-                            disabled={!entry.filiere}
+                            disabled={locked || !entry.filiere}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
                             {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
@@ -481,19 +584,19 @@ export default function AdminDocumentsPage() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px]">Année</Label>
-                          <Input type="number" value={entry.annee}
+                          <Input type="number" value={entry.annee} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "annee", Number(e.target.value))}
                             className="h-8 text-xs" />
                         </div>
                         <div className="col-span-2 space-y-1">
                           <Label className="text-[10px]">Directeur (optionnel)</Label>
-                          <Input value={entry.directeur}
+                          <Input value={entry.directeur} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "directeur", e.target.value)}
                             className="h-8 text-xs" placeholder="Prof. Nom Prénom" />
                         </div>
                         <div className="col-span-2 space-y-1">
                           <Label className="text-[10px]">Résumé (optionnel)</Label>
-                          <Textarea value={entry.resume}
+                          <Textarea value={entry.resume} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "resume", e.target.value)}
                             className="text-xs resize-none" rows={2} placeholder="Brève description…" />
                         </div>
@@ -514,7 +617,8 @@ export default function AdminDocumentsPage() {
             </Button>
             {step === "classify" && (
               <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90" onClick={handleSubmitAll} disabled={submitting}>
-                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Publication…</>
+                {submitting
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Publication… ({files.filter((f) => f.status === "done").length}/{files.length})</>
                   : <><Upload className="h-4 w-4" /> Publier {files.length} document(s)</>}
               </Button>
             )}

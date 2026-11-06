@@ -113,6 +113,9 @@ export default function AdminDocumentsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [bulk, setBulk] = useState({ type: "memoire_master", faculte: "", filiere: "", niveau: "", annee: new Date().getFullYear(), directeur: "" })
+  // Vide = "appliquer à tous" (comportement par défaut) ; non-vide = lot
+  // hétérogène où seul le sous-ensemble coché doit recevoir ce rangement.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   function loadDocs() {
     api.getDocumentsAdmin({ statut: "approuve" }).then(setDocs).catch(() => {})
@@ -145,6 +148,16 @@ export default function AdminDocumentsPage() {
   function resetForm() {
     setFiles([])
     setStep("upload")
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   function openSheet() {
@@ -191,6 +204,12 @@ export default function AdminDocumentsPage() {
     setFiles((prev) => {
       const next = prev.filter((f) => f.id !== id)
       if (next.length === 0) setStep("upload")
+      return next
+    })
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
       return next
     })
   }
@@ -272,16 +291,18 @@ export default function AdminDocumentsPage() {
   const filieres = (faculteId: string) =>
     facultes.find((f) => f.id === faculteId)?.filieres ?? []
 
-  /** Applique les champs communs (bandeau "Appliquer a tous") a chaque fichier
-   * en attente — evite de ressaisir Faculte/Filiere/Niveau/Type/Annee sur
-   * chacun quand un lot partage la meme classification (cas frequent a
-   * l'import d'une centaine de documents). */
+  /** Applique les champs communs (bandeau "Classification commune") aux
+   * fichiers en attente — soit tous, soit uniquement ceux cochés quand le
+   * lot est hétérogène (ex : 100 PDF venant de plusieurs facultés/niveaux
+   * différents, à classer par groupes successifs). */
   function applyBulkToAll() {
     if (!bulk.faculte || !bulk.niveau) {
       toast.error("Choisissez au moins une faculté et un niveau avant d'appliquer")
       return
     }
+    const targetAll = selectedIds.size === 0
     setFiles((prev) => prev.map((f) => {
+      if (!targetAll && !selectedIds.has(f.id)) return f
       if (f.status !== "pending" && f.status !== "error") return f
       const updated = {
         ...f,
@@ -295,7 +316,10 @@ export default function AdminDocumentsPage() {
       updated.titre = computeTitre(updated)
       return updated
     }))
-    toast.success("Champs communs appliqués à tous les fichiers en attente")
+    toast.success(targetAll
+      ? "Champs communs appliqués à tous les fichiers en attente"
+      : `Champs communs appliqués à ${selectedIds.size} fichier(s) sélectionné(s)`)
+    if (!targetAll) setSelectedIds(new Set())
   }
 
   return (
@@ -456,9 +480,22 @@ export default function AdminDocumentsPage() {
 
                 {files.length > 1 && (
                   <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-                    <p className="text-xs font-semibold text-primary">
-                      Classification commune — pratique pour un import en lot (ex : toute une promotion)
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-primary">
+                        Classification commune — pratique pour un import en lot
+                      </p>
+                      <button type="button" className="text-[11px] text-primary hover:underline flex-shrink-0"
+                        onClick={() => setSelectedIds((prev) =>
+                          prev.size === files.length ? new Set() : new Set(files.map((f) => f.id))
+                        )}>
+                        {selectedIds.size === files.length ? "Tout désélectionner" : "Tout sélectionner"}
+                      </button>
+                    </div>
+                    {selectedIds.size > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Lot hétérogène ? Cochez les fichiers concernés ci-dessous (ex : une seule faculté à la fois) avant d&apos;appliquer — {selectedIds.size} sélectionné(s).
+                      </p>
+                    )}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       <select value={bulk.type} onChange={(e) => setBulk((b) => ({ ...b, type: e.target.value }))}
                         className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
@@ -490,7 +527,9 @@ export default function AdminDocumentsPage() {
                     </div>
                     <Button type="button" size="sm" variant="outline" className="gap-1.5 text-xs h-8 w-full"
                       onClick={applyBulkToAll}>
-                      Appliquer à tous les fichiers en attente
+                      {selectedIds.size > 0
+                        ? `Appliquer à ${selectedIds.size} fichier(s) sélectionné(s)`
+                        : "Appliquer à tous les fichiers en attente"}
                     </Button>
                   </div>
                 )}
@@ -507,6 +546,11 @@ export default function AdminDocumentsPage() {
                     }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
+                          {files.length > 1 && !locked && (
+                            <input type="checkbox" checked={selectedIds.has(entry.id)}
+                              onChange={() => toggleSelected(entry.id)}
+                              className="h-3.5 w-3.5 flex-shrink-0 accent-primary" />
+                          )}
                           {entry.status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />}
                           {entry.status === "error" && <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />}
                           {entry.status === "uploading" && <Loader2 className="h-4 w-4 text-primary animate-spin flex-shrink-0" />}

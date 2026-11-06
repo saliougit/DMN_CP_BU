@@ -111,7 +111,7 @@ export function PublicNavbar() {
           ) : (
             <>
               <Link href="/connexion">
-                <Button variant="ghost" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2">
                   <LogIn className="h-4 w-4" />
                   <span className="hidden sm:inline">Connexion</span>
                 </Button>

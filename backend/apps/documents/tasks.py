@@ -64,20 +64,47 @@ def _send_to_many(subject: str, template: str, context: dict, recipients: list):
 
 
 @shared_task(queue="default", bind=True, max_retries=3)
-def calculer_pages(self, doc_id: str):
+def traiter_pdf(self, doc_id: str):
+    """Compte les pages et extrait le texte du PDF (pour la recherche), en
+    tache async pour ne pas bloquer la reponse HTTP de soumission.
+
+    L'extraction de texte est ce qui permet a la recherche de trouver un
+    document par son theme reel meme si personne n'a pense a le mentionner
+    dans le titre, le resume ou les mots-cles — voir search.py.
+    """
     import pdfplumber
     from .models import Document
+    from . import search
     try:
         doc = Document.objects.get(id=doc_id)
     except Document.DoesNotExist:
         return
     if not doc.fichier:
         return
+
+    # Cap a ~60 pages / 40000 caracteres : suffisant pour la pertinence de
+    # recherche sans faire exploser la taille du document en base/index.
+    MAX_PAGES, MAX_CHARS = 60, 40_000
     try:
         with doc.fichier.open("rb") as f:
             with pdfplumber.open(f) as pdf:
                 nb_pages = len(pdf.pages)
-        Document.objects.filter(pk=doc.pk).update(pages=nb_pages)
+                chunks = []
+                total = 0
+                for page in pdf.pages[:MAX_PAGES]:
+                    text = page.extract_text() or ""
+                    chunks.append(text)
+                    total += len(text)
+                    if total >= MAX_CHARS:
+                        break
+                texte = "\n".join(chunks)[:MAX_CHARS]
+        Document.objects.filter(pk=doc.pk).update(pages=nb_pages, contenu_texte=texte)
+        doc.refresh_from_db(fields=["statut"])
+        if doc.statut == "approuve":
+            # Deja indexe sans le texte si l'admin a approuve avant la fin de
+            # cette tache — on reindexe pour que la recherche en beneficie.
+            doc.contenu_texte = texte
+            search.index_document(doc)
     except Exception:
         pass
 

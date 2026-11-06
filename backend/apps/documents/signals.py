@@ -17,7 +17,7 @@ def on_document_save(sender, instance, created, **kwargs):
     doc_id = str(instance.id)
 
     if created:
-        _fire("calculer_pages", doc_id)
+        _fire("traiter_pdf", doc_id)
         if instance.statut == "en_attente":
             # Nouvelle soumission → notifier les admins
             _fire("notifier_admins_soumission", doc_id)

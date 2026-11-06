@@ -43,6 +43,11 @@ class Document(models.Model):
     directeur = models.CharField(max_length=200, blank=True)
     pages     = models.PositiveSmallIntegerField(null=True, blank=True)
     fichier   = models.FileField(upload_to="documents/", null=True, blank=True)
+    # Texte extrait du PDF (pdfplumber, premieres pages) - jamais expose via
+    # l'API, sert uniquement a indexer le contenu reel dans Meilisearch : la
+    # recherche ne doit pas dependre uniquement du titre/resume/mots-cles
+    # saisis a la main (voir apps/documents/tasks.py::traiter_pdf).
+    contenu_texte = models.TextField(blank=True, default="")
 
     soumis_par = models.ForeignKey(
         "accounts.User",

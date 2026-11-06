@@ -16,7 +16,7 @@ def ensure_index() -> None:
     Appelée dans DocumentsConfig.ready() — échec silencieux si Meilisearch indisponible."""
     try:
         idx = _index()
-        idx.update_searchable_attributes(["titre", "auteur", "resume", "mots_cles", "directeur"])
+        idx.update_searchable_attributes(["titre", "auteur", "resume", "mots_cles", "directeur", "contenu_texte"])
         idx.update_filterable_attributes(["statut", "faculte", "filiere", "niveau", "type", "annee"])
         idx.update_sortable_attributes(["annee", "date_soumission"])
     except Exception:
@@ -39,6 +39,7 @@ def index_document(doc) -> None:
             "resume":          doc.resume        or "",
             "mots_cles":       doc.mots_cles    or [],
             "directeur":       doc.directeur    or "",
+            "contenu_texte":   doc.contenu_texte or "",
             "date_soumission": doc.date_soumission.isoformat() if doc.date_soumission else "",
         }])
     except Exception:

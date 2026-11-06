@@ -1,3 +1,4 @@
+import logging
 import os
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -7,6 +8,8 @@ from celery import shared_task
 from django.conf import settings
 from django.core.mail import get_connection
 from django.template.loader import render_to_string
+
+logger = logging.getLogger(__name__)
 
 _LOGO_PATH = os.path.join(
     os.path.dirname(__file__), "templates", "emails", "logo.png"
@@ -290,6 +293,11 @@ def notifier_approbation(self, doc_id: str):
 
     destinataire = doc.soumis_par
     if not destinataire or not destinataire.email or destinataire.role == "admin":
+        logger.warning(
+            "notifier_approbation: pas d'email envoye pour le document %s (soumis_par=%s) "
+            "— compte supprime/sans email/admin.",
+            doc_id, destinataire.id if destinataire else None,
+        )
         return
 
     nom = destinataire.get_full_name() or destinataire.username
@@ -314,6 +322,11 @@ def notifier_rejet(self, doc_id: str):
 
     destinataire = doc.soumis_par
     if not destinataire or not destinataire.email or destinataire.role == "admin":
+        logger.warning(
+            "notifier_rejet: pas d'email envoye pour le document %s (soumis_par=%s) "
+            "— compte supprime/sans email/admin.",
+            doc_id, destinataire.id if destinataire else None,
+        )
         return
 
     nom = destinataire.get_full_name() or destinataire.username

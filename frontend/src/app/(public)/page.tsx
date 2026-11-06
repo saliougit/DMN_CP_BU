@@ -237,7 +237,7 @@ export default function HomePage() {
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground">
               Découvrez une publication consacrée à la transmission des savoirs et aux travaux de la Commission Pédagogique.
             </p>
-            <p className="mt-5 text-xs font-medium text-primary/80">
+            <p className="mt-5 hidden text-xs font-medium text-primary/80 sm:block">
               Faites glisser la couverture pour l&apos;explorer
             </p>
           </div>

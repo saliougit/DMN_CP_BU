@@ -140,7 +140,7 @@ export default function InscriptionPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Faculté / École</Label>
                   <select value={form.faculte} onChange={(e) => setField("faculte", e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
+                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir une faculté</option>
                     {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                   </select>
@@ -149,7 +149,7 @@ export default function InscriptionPage() {
                   <Label className="text-xs">Filière</Label>
                   <select value={form.filiere} onChange={(e) => setField("filiere", e.target.value)}
                     disabled={!form.faculte}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors disabled:opacity-50" required>
+                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary transition-colors disabled:opacity-50" required>
                     <option value="">Choisir une filière</option>
                     {filieresDispo.map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                   </select>
@@ -157,7 +157,7 @@ export default function InscriptionPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Niveau actuel</Label>
                   <select value={form.niveau} onChange={(e) => setField("niveau", e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors" required>
+                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary transition-colors" required>
                     <option value="">Choisir un niveau</option>
                     {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                   </select>

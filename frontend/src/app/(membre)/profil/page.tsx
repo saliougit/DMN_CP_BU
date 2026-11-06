@@ -124,7 +124,7 @@ export default function ProfilPage() {
     }
   }
 
-  const selectCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-colors disabled:opacity-50"
+  const selectCls = "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-colors disabled:opacity-50"
 
   return (
     <div className="min-h-screen bg-muted/20">

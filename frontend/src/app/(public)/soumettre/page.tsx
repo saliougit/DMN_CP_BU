@@ -202,7 +202,7 @@ export default function SoumettrePage() {
     }
   }
 
-  const selectCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
+  const selectCls = "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:border-primary"
   const doneCount = entries.filter((e) => e.status === "done").length
 
   return (
@@ -278,12 +278,12 @@ export default function SoumettrePage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Input
                         value={entry.titre}
                         onChange={(e) => updateEntry(entry.id, "titre", e.target.value)}
                         placeholder="Titre du document *"
-                        className="h-8 text-xs flex-1"
+                        className="h-9 text-sm flex-1 min-w-0"
                         disabled={entry.status !== "pending"}
                         required
                       />
@@ -291,7 +291,7 @@ export default function SoumettrePage() {
                         type="number"
                         value={entry.annee}
                         onChange={(e) => updateEntry(entry.id, "annee", Number(e.target.value))}
-                        className="h-8 text-xs w-20 flex-shrink-0"
+                        className="h-9 text-sm w-full sm:w-24 sm:flex-shrink-0"
                         disabled={entry.status !== "pending"}
                         min={1900} max={2100}
                       />

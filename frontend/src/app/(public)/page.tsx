@@ -22,7 +22,12 @@ const QUICK_SEARCHES = [
   "Philosophie",
 ]
 
-const BROWSABLE_TYPES = ["memoire_licence", "memoire_master", "these_doctorat", "article"] as const
+const BROWSABLE_TYPES = [
+  { type: "memoire_licence", body: "Travaux de fin de cycle Licence" },
+  { type: "memoire_master", body: "Travaux de fin de cycle Master" },
+  { type: "these_doctorat", body: "Recherches doctorales approfondies" },
+  { type: "article", body: "Publications et contributions scientifiques" },
+] as const
 
 const STEPS = [
   { icon: UserPlus, title: "Créez votre compte", body: "Inscrivez-vous avec votre faculté, votre filière et votre niveau en quelques secondes.", accent: "text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300" },
@@ -276,12 +281,17 @@ export default function HomePage() {
 
       {/* Types de documents */}
       <SectionReveal variant="fade-up">
-        <section className="mx-auto max-w-4xl px-4 py-14">
-          <h2 className="mb-8 text-center font-display text-xl font-bold text-foreground sm:text-2xl">
-            Parcourir par type
-          </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {BROWSABLE_TYPES.map((type, i) => {
+        <section className="mx-auto max-w-5xl px-4 py-14">
+          <div className="mb-10 text-center">
+            <span className="inline-block mb-3 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary uppercase tracking-widest">
+              Catalogue
+            </span>
+            <h2 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Parcourir par type
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {BROWSABLE_TYPES.map(({ type, body }, i) => {
               const Icon = TYPE_ICONS[type]
               return (
                 <SectionRevealItem
@@ -289,15 +299,20 @@ export default function HomePage() {
                   key={type}
                   variant={i % 2 === 0 ? "fade-right" : "fade-left"}
                   delay={i * 90}
+                  className="h-full"
                 >
                   <Link
                     href={`/recherche?type=${type}`}
-                    className={`group flex h-full flex-col items-center gap-3 rounded-2xl border border-transparent p-6 text-center text-sm font-semibold transition-all duration-300 hover:-translate-y-1 hover:border-current/20 hover:shadow-lg ${TYPE_COLORS[type]}`}
+                    className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg"
                   >
-                    <Icon className="h-8 w-8" />
-                    {TYPE_LABELS[type]}
-                    <span className="flex items-center gap-1 text-[11px] font-normal opacity-0 transition-opacity group-hover:opacity-70">
-                      Parcourir <ArrowRight className="h-3 w-3" />
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${TYPE_COLORS[type]}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-display text-base font-bold text-foreground">{TYPE_LABELS[type]}</h3>
+                    <p className="flex-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+                      Parcourir
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                     </span>
                   </Link>
                 </SectionRevealItem>

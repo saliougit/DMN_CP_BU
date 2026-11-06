@@ -21,7 +21,7 @@ export const REVEAL_VARIANTS: Record<RevealVariant, VariantStyle> = {
 
 const THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20)
 
-function useReplayInView(minRatio = 0.15) {
+function useReplayInView(baseMinRatio = 0.15) {
   const ref = useRef<HTMLElement>(null)
   const [shown, setShown] = useState(false)
 
@@ -38,13 +38,23 @@ function useReplayInView(minRatio = 0.15) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry) return
+        const rootHeight = entry.rootBounds?.height ?? window.innerHeight
+        // Un bloc plus haut que l'ecran (frequent sur mobile, viewport
+        // court) ne peut jamais atteindre un ratio fixe calcule sur sa
+        // hauteur totale, meme rempli a 100% de l'ecran — l'animation
+        // restait bloquee a l'etat invisible. On mesure alors en pixels
+        // visibles (~1/4 d'ecran) plutot qu'en ratio global.
+        const minRatio =
+          entry.boundingClientRect.height > rootHeight
+            ? Math.min(0.35, (rootHeight * 0.25) / entry.boundingClientRect.height)
+            : baseMinRatio
         setShown(entry.isIntersecting && entry.intersectionRatio >= minRatio)
       },
       { threshold: THRESHOLDS, rootMargin: "0px 0px -5% 0px" }
     )
     observer.observe(node)
     return () => observer.disconnect()
-  }, [minRatio])
+  }, [baseMinRatio])
 
   return { ref, shown }
 }

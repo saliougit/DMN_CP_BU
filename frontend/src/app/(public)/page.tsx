@@ -91,12 +91,12 @@ export default function HomePage() {
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/8 via-transparent to-transparent"
         />
         <div aria-hidden className="hero-pattern pointer-events-none absolute inset-0 -z-10" />
-        <div aria-hidden className="hero-glow pointer-events-none absolute -z-10" />
 
         {/* Logo avec animation au survol */}
         <SectionRevealItem variant="fade-down" className="mb-6 flex flex-col items-center gap-3">
           <div className="group relative h-40 w-40 cursor-pointer">
-            <span className="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-xl transition-all duration-500 group-hover:opacity-100 group-hover:scale-125" />
+            <div aria-hidden className="hero-glow pointer-events-none absolute -z-10" />
+            <span className="absolute inset-0 rounded-full bg-primary/20 opacity-60 blur-xl transition-all duration-500 group-hover:opacity-100 group-hover:scale-125" />
             <span className="absolute inset-0 rounded-full ring-4 ring-primary/20 transition-all duration-500 group-hover:ring-primary/60 group-hover:ring-8" />
             <div className="relative h-full w-full overflow-hidden rounded-full bg-white shadow-xl transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-primary/30 dark:bg-white p-1">
               <Image

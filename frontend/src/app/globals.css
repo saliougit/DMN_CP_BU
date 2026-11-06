@@ -154,14 +154,18 @@
 .hero-glow {
   --hg-color-inner: rgb(35 150 88 / 16%);
   --hg-color-mid:   rgb(35 150 88 / 7%);
-  top: 8%;
+  /* Centre sur le logo (son wrapper est le parent relatif le plus proche),
+     pas sur la section hero : sur mobile cette derniere est bien plus haute
+     (texte qui passe a la ligne, barre de recherche empilee), donc un
+     positionnement en % de sa hauteur faisait deriver le halo loin du logo. */
+  top: 50%;
   left: 50%;
-  width: min(48vw, 540px);
+  width: clamp(220px, 48vw, 540px);
   aspect-ratio: 1;
   border-radius: 999px;
   background: radial-gradient(circle, var(--hg-color-inner) 0%, var(--hg-color-mid) 38%, transparent 70%);
   filter: blur(10px);
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   animation: hero-glow-breathe 8s ease-in-out infinite;
 }
 

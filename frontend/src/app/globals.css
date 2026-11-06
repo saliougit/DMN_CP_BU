@@ -162,13 +162,12 @@
   animation: hero-glow-breathe 8s ease-in-out infinite;
 }
 
-/* Dark mode — opacités renforcées */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .hero-pattern { --hp-color: rgb(50 180 100 / 9%); opacity: 0.85; }
-  :root:not([data-theme="light"]) .hero-glow    { --hg-color-inner: rgb(50 180 100 / 28%); --hg-color-mid: rgb(50 180 100 / 12%); }
-}
-:root[data-theme="dark"] .hero-pattern { --hp-color: rgb(50 180 100 / 9%); opacity: 0.85; }
-:root[data-theme="dark"] .hero-glow    { --hg-color-inner: rgb(50 180 100 / 28%); --hg-color-mid: rgb(50 180 100 / 12%); }
+/* Dark mode — opacités renforcées. Suit le theme reellement actif du site
+   (classe .dark posee par next-themes), pas prefers-color-scheme : sinon un
+   telephone en mode sombre forcait ce rendu meme quand le site restait en
+   theme clair (defaultTheme="light"), melangeant les deux rendus. */
+.dark .hero-pattern { --hp-color: rgb(50 180 100 / 9%); opacity: 0.85; }
+.dark .hero-glow    { --hg-color-inner: rgb(50 180 100 / 28%); --hg-color-mid: rgb(50 180 100 / 12%); }
 
 @keyframes hero-pattern-drift {
   from { background-position: 0 0, 0 0, 20px 35px, 20px 35px; }

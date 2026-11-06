@@ -206,7 +206,7 @@ function FiltersContent({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</p>
         <Select value={filtreType || "__all__"} onValueChange={(v) => setFiltreType(v && v !== "__all__" ? v : "")}>
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue />
+            <SelectValue>{(v: string) => v === "__all__" ? "Tous" : TYPE_LABELS[v] ?? v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
@@ -228,7 +228,7 @@ function FiltersContent({
           }}
         >
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue />
+            <SelectValue>{(v: string) => v === "__all__" ? "Toutes" : v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
@@ -243,7 +243,7 @@ function FiltersContent({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filière</p>
         <Select value={filtreFiliere || "__all__"} onValueChange={(v) => setFiltreFiliere(v && v !== "__all__" ? v : "")}>
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue />
+            <SelectValue>{(v: string) => v === "__all__" ? "Toutes" : v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>
@@ -262,7 +262,7 @@ function FiltersContent({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Niveau</p>
         <Select value={filtreNiveau || "__all__"} onValueChange={(v) => setFiltreNiveau(v && v !== "__all__" ? v : "")}>
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue />
+            <SelectValue>{(v: string) => v === "__all__" ? "Tous" : v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__" className="text-xs">Tous</SelectItem>
@@ -277,7 +277,7 @@ function FiltersContent({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</p>
         <Select value={filtreAnnee || "__all__"} onValueChange={(v) => setFiltreAnnee(v && v !== "__all__" ? v : "")}>
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue />
+            <SelectValue>{(v: string) => v === "__all__" ? "Toutes" : v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__" className="text-xs">Toutes</SelectItem>

@@ -112,7 +112,7 @@ export default function AdminDocumentsPage() {
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [bulk, setBulk] = useState({ type: "memoire_master", faculte: "", filiere: "", niveau: "", annee: new Date().getFullYear(), directeur: "" })
+  const [bulk, setBulk] = useState({ type: "memoire_master", faculte: "", filiere: "", niveau: "", annee: new Date().getFullYear(), applyAnnee: true, directeur: "" })
   // Vide = "appliquer à tous" (comportement par défaut) ; non-vide = lot
   // hétérogène où seul le sous-ensemble coché doit recevoir ce rangement.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -310,7 +310,10 @@ export default function AdminDocumentsPage() {
         faculte: bulk.faculte,
         filiere: bulk.filiere,
         niveau: bulk.niveau,
-        annee: bulk.annee,
+        // L'année est souvent la seule chose qui varie au sein d'un meme
+        // lot Faculte/Filiere/Niveau (plusieurs promotions) — ne pas
+        // l'ecraser si l'admin a decoche la case.
+        annee: bulk.applyAnnee ? bulk.annee : f.annee,
         directeur: bulk.directeur || f.directeur,
       }
       updated.titre = computeTitre(updated)
@@ -518,9 +521,17 @@ export default function AdminDocumentsPage() {
                         <option value="">Niveau</option>
                         {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                       </select>
-                      <Input type="number" value={bulk.annee}
-                        onChange={(e) => setBulk((b) => ({ ...b, annee: Number(e.target.value) }))}
-                        className="h-8 text-xs" placeholder="Année" />
+                      <div className="flex items-center gap-1.5">
+                        <Input type="number" value={bulk.annee} disabled={!bulk.applyAnnee}
+                          onChange={(e) => setBulk((b) => ({ ...b, annee: Number(e.target.value) }))}
+                          className="h-8 text-xs disabled:opacity-40" placeholder="Année" />
+                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0 cursor-pointer" title="Décocher si le lot mélange plusieurs promotions/années">
+                          <input type="checkbox" checked={bulk.applyAnnee}
+                            onChange={(e) => setBulk((b) => ({ ...b, applyAnnee: e.target.checked }))}
+                            className="h-3.5 w-3.5 accent-primary" />
+                          incl.
+                        </label>
+                      </div>
                       <Input value={bulk.directeur}
                         onChange={(e) => setBulk((b) => ({ ...b, directeur: e.target.value }))}
                         className="h-8 text-xs" placeholder="Directeur (optionnel)" />

@@ -11,11 +11,14 @@ whitenoise==6.12.0
 psycopg2-binary==2.9.12
 
 # Cache & Queue
-# kombu (via celery[redis]) exige redis-py >= 6.1.0 — epingle plus bas,
-# .delay() echoue silencieusement (avale par le try/except de _fire() dans
-# signals.py), aucune tache Celery (emails, extraction PDF) n'est enfilee.
-redis==6.2.0
-celery[redis]==5.4.0
+# celery[redis]==5.4.0 epingle lui-meme redis-py <6.0.0 dans son extra, mais
+# installe une version de kombu (<6.0,>=5.3.4) qui exige en interne redis-py
+# >=6.1.0 au runtime — incoherence entre les deux, pas juste un mauvais pin
+# cote applicatif. .delay() echouait silencieusement (avale par le
+# try/except de _fire() dans signals.py), aucune tache Celery (emails,
+# extraction PDF) n'etait enfilee. celery>=5.5 a corrige cette plage.
+redis>=6.1.0,<7.0.0
+celery[redis]>=5.5.0,<6.0.0
 django-redis==5.4.0
 
 # Stockage fichiers (MinIO via API S3)

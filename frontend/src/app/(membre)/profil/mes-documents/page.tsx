@@ -24,7 +24,7 @@ function fmt(iso: string | undefined) {
 }
 
 export default function MesDocumentsPage() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [recherche, setRecherche] = useState("")
   const [refreshing, setRefreshing] = useState(false)
@@ -42,6 +42,13 @@ export default function MesDocumentsPage() {
   }, [])
 
   useEffect(() => { loadDocs() }, [loadDocs])
+
+  // On ne redirige qu'une fois la verification du token terminee — sinon le
+  // premier rendu (user encore null le temps de la restauration de session)
+  // renvoyait vers /connexion un utilisateur pourtant bien connecte.
+  useEffect(() => {
+    if (!authLoading && !user) router.push("/connexion")
+  }, [authLoading, user, router])
 
   async function handleDownload(doc: Document) {
     if (downloading || !doc.fichierUrl) return
@@ -72,8 +79,8 @@ export default function MesDocumentsPage() {
 
   const { paginated, PaginationBar } = usePagination(filtrees, 5)
 
-  if (!user) { router.push("/connexion"); return null }
-  if (loading) return <DmnLoader />
+  if (authLoading || loading) return <DmnLoader />
+  if (!user) return null
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

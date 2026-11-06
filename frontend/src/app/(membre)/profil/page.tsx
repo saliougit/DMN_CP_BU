@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { DmnLoader } from "@/components/ui/dmn-loader"
 import { useAuth } from "@/contexts/auth-context"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
@@ -29,7 +30,7 @@ function formatDate(iso: string) {
 }
 
 export default function ProfilPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, isLoading: authLoading } = useAuth()
   const router = useRouter()
 
   const [editing, setEditing] = useState(false)
@@ -76,7 +77,15 @@ export default function ProfilPage() {
     rejetes:   mesDocuments.filter((d) => d.statut === "rejete").length,
   }), [mesDocuments])
 
-  if (!user) { router.push("/connexion"); return null }
+  // On ne redirige qu'une fois la verification du token terminee — sinon le
+  // premier rendu (user encore null le temps de la restauration de session)
+  // renvoyait vers /connexion un utilisateur pourtant bien connecte.
+  useEffect(() => {
+    if (!authLoading && !user) router.push("/connexion")
+  }, [authLoading, user, router])
+
+  if (authLoading) return <DmnLoader />
+  if (!user) return null
 
   async function handleSave() {
     setSaving(true)

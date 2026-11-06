@@ -17,6 +17,9 @@ class UserSerializer(serializers.ModelSerializer):
             "date_adhesion", "photo", "date_joined",
         ]
         read_only_fields = ["id", "role", "date_joined"]
+        # Meme raison que RegisterSerializer : eviter le message generique
+        # DRF sur le champ email unique.
+        extra_kwargs = {"email": {"validators": []}}
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -34,6 +37,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             "faculte": {"required": False, "allow_null": True},
             "filiere": {"required": False, "allow_null": True},
             "niveau":  {"required": False, "allow_null": True},
+            # email.unique=True sur le modele fait que DRF attache
+            # automatiquement son propre UniqueValidator generique ("Un objet
+            # user avec ce champ email address existe deja.") qui s'execute
+            # AVANT validate() ci-dessous et ecrase son message propre -
+            # desactive au profit de la verification deja faite plus bas.
+            "email": {"validators": []},
         }
 
     def validate(self, attrs):

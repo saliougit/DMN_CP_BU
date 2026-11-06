@@ -138,20 +138,24 @@ export default function ProfilPage() {
           <div className="space-y-4">
             {/* Carte identité */}
             <Card className="overflow-hidden">
-              <div className="h-16 bg-gradient-to-r from-primary/80 to-primary" />
+              <div className="h-20 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary via-primary/80 to-primary/60" />
               <CardContent className="pt-0 px-5 pb-5">
-                <div className="flex flex-col items-center -mt-8 text-center">
-                  <Avatar className="h-16 w-16 border-4 border-background shadow">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
+                <div className="flex flex-col items-center -mt-12 text-center">
+                  <Avatar className="h-24 w-24 border-4 border-card shadow-lg ring-2 ring-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-display text-2xl font-bold">
                       {user.prenom.charAt(0)}{user.nom.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <h2 className="mt-3 text-base font-bold">{user.prenom} {user.nom}</h2>
-                  <Badge className="mt-1 text-[10px]" variant="secondary">
+                  <h2 className="mt-3 font-display text-lg font-bold">{user.prenom} {user.nom}</h2>
+                  <Badge className={`mt-1.5 text-[10px] ${user.role === "admin" ? "bg-primary/15 text-primary border-primary/20" : ""}`} variant={user.role === "admin" ? "outline" : "secondary"}>
                     {user.role === "admin" ? "Administrateur" : "Membre"}
                   </Badge>
-                  <p className="mt-2 text-[11px] text-muted-foreground">{user.email}</p>
-                  <p className="text-[11px] text-muted-foreground">Membre depuis {formatDate(user.createdAt)}</p>
+                  <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Mail className="h-3 w-3" /> {user.email}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Calendar className="h-3 w-3" /> Membre depuis {formatDate(user.createdAt)}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -161,16 +165,19 @@ export default function ProfilPage() {
               <CardContent className="p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mes soumissions</p>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-2">
-                    <p className="text-lg font-bold text-amber-600">{statsDocs.enAttente}</p>
+                  <div className="flex flex-col items-center gap-1 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 transition-transform hover:scale-[1.03]">
+                    <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    <p className="font-display text-xl font-bold text-amber-600">{statsDocs.enAttente}</p>
                     <p className="text-[10px] text-muted-foreground leading-tight">En attente</p>
                   </div>
-                  <div className="rounded-lg bg-primary/10 p-2">
-                    <p className="text-lg font-bold text-primary">{statsDocs.approuves}</p>
+                  <div className="flex flex-col items-center gap-1 rounded-xl bg-primary/10 p-3 transition-transform hover:scale-[1.03]">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    <p className="font-display text-xl font-bold text-primary">{statsDocs.approuves}</p>
                     <p className="text-[10px] text-muted-foreground leading-tight">Approuvés</p>
                   </div>
-                  <div className="rounded-lg bg-destructive/10 p-2">
-                    <p className="text-lg font-bold text-destructive">{statsDocs.rejetes}</p>
+                  <div className="flex flex-col items-center gap-1 rounded-xl bg-destructive/10 p-3 transition-transform hover:scale-[1.03]">
+                    <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    <p className="font-display text-xl font-bold text-destructive">{statsDocs.rejetes}</p>
                     <p className="text-[10px] text-muted-foreground leading-tight">Rejetés</p>
                   </div>
                 </div>
@@ -198,7 +205,7 @@ export default function ProfilPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold">Informations personnelles</h3>
+                  <h3 className="font-display text-base font-bold">Informations personnelles</h3>
                   <Button variant={editing ? "ghost" : "outline"} size="sm" className="text-xs h-8"
                     onClick={() => setEditing(!editing)}>
                     {editing ? "Annuler" : "Modifier"}
@@ -269,7 +276,7 @@ export default function ProfilPage() {
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">Changer le mot de passe</h3>
+                  <h3 className="font-display text-base font-bold">Changer le mot de passe</h3>
                 </div>
                 <Separator />
                 <form onSubmit={handleChangePassword} className="space-y-3">
@@ -309,7 +316,7 @@ export default function ProfilPage() {
               <Card>
                 <CardContent className="p-6 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Derniers documents soumis</h3>
+                    <h3 className="font-display text-base font-bold">Derniers documents soumis</h3>
                     <Link href="/profil/mes-documents">
                       <Button variant="outline" size="sm" className="text-xs h-7">Tout voir</Button>
                     </Link>

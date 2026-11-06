@@ -76,14 +76,14 @@ export function PublicNavbar() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex items-center gap-2.5 py-1">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    <div className="flex items-center gap-3 rounded-lg bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-2.5">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/25">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{user.prenom} {user.nom}</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{user.prenom} {user.nom}</p>
                         <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                       </div>
                     </div>

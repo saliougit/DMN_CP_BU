@@ -28,6 +28,10 @@ export function useCursorTrailEnabled() {
 export function CursorTrail({ enabled = true }: { enabled?: boolean }) {
   useEffect(() => {
     if (!enabled) return
+    // Pas de curseur sur tactile : la boucle d'animation tournerait pour
+    // rien en continu (requestAnimationFrame perpetuel), pur gaspillage de
+    // batterie pour un effet qui ne peut jamais se declencher la-bas.
+    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return
 
     const N = 14
     const LERP = 0.18

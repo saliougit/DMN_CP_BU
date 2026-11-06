@@ -42,7 +42,10 @@ export function PdfViewer({ fileUrl, fileName, pages: _pages, page, onPageChange
       a.href     = url
       a.download = fileName ? `${fileName}.pdf` : "document.pdf"
       a.click()
-      URL.revokeObjectURL(url)
+      // Delai avant revocation : ouvrir un nouvel onglet (target=_blank) est
+      // asynchrone - revoquer immediatement pouvait arriver avant que l'onglet
+      // ait fini de charger le blob, l'ouvrant vide.
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
     } finally {
       setDownloading(false)
     }

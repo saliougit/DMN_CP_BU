@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
 import { api } from "@/lib/api"
-import { TYPE_LABELS } from "@/lib/document-types"
+import { TYPE_LABELS, TYPE_COLORS, TYPE_ICONS } from "@/lib/document-types"
 import { usePagination } from "@/components/ui/pagination"
 import type { Document } from "@/types"
 
@@ -62,7 +62,10 @@ export default function MesDocumentsPage() {
       a.href = blobUrl
       a.download = `${doc.titre}.pdf`
       a.click()
-      URL.revokeObjectURL(blobUrl)
+      // Delai avant revocation : ouvrir un nouvel onglet (target=_blank) est
+      // asynchrone - revoquer immediatement pouvait arriver avant que l'onglet
+      // ait fini de charger le blob, l'ouvrant vide.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000)
     } catch {
       // silencieux — l'URL directe peut aussi fonctionner
     } finally {
@@ -117,16 +120,18 @@ export default function MesDocumentsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {paginated.map((doc) => (
-            <div key={doc.id} className={`rounded-xl border bg-card p-4 space-y-3 ${doc.statut === "rejete" ? "border-red-200 dark:border-red-900" : "border-border"}`}>
+          {paginated.map((doc) => {
+            const TypeIcon = TYPE_ICONS[doc.type] ?? FileText
+            return (
+            <div key={doc.id} className={`rounded-2xl border bg-card p-4 space-y-3 transition-all duration-200 hover:shadow-md ${doc.statut === "rejete" ? "border-red-200 dark:border-red-900" : "border-border hover:border-primary/30"}`}>
               {/* En-tête : titre + badge */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                  <div className={`mt-0.5 flex-shrink-0 rounded-lg p-1.5 ${doc.statut === "rejete" ? "bg-red-50 dark:bg-red-950" : "bg-primary/10"}`}>
-                    <FileText className={`h-4 w-4 ${doc.statut === "rejete" ? "text-red-500" : "text-primary"}`} />
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${doc.statut === "rejete" ? "bg-red-50 text-red-500 dark:bg-red-950" : TYPE_COLORS[doc.type] ?? "bg-primary/10 text-primary"}`}>
+                    <TypeIcon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight">{doc.titre}</h3>
+                    <h3 className="font-display text-sm font-bold leading-tight break-words">{doc.titre}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">{TYPE_LABELS[doc.type] ?? doc.type}</p>
                   </div>
                 </div>
@@ -203,13 +208,14 @@ export default function MesDocumentsPage() {
                   </Button>
                 )}
                 <Link href={`/documents/${doc.id}`}>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
+                  <Button size="sm" className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90">
                     <Eye className="h-3.5 w-3.5" /> Voir
                   </Button>
                 </Link>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

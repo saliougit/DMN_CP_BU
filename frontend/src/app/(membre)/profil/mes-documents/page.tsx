@@ -106,7 +106,7 @@ export default function MesDocumentsPage() {
           placeholder="Rechercher dans mes documents…" className="h-9 pl-9 rounded-lg text-sm" />
       </div>
 
-      <a ref={downloadLinkRef} className="hidden" aria-hidden />
+      <a ref={downloadLinkRef} target="_blank" rel="noopener noreferrer" className="hidden" aria-hidden />
 
       {filtrees.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center rounded-xl border-2 border-dashed border-border">

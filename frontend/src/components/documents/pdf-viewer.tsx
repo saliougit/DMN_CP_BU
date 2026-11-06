@@ -171,7 +171,7 @@ export function PdfViewer({ fileUrl, fileName, pages: _pages, page, onPageChange
           {numPages ? `${numPages} page${numPages > 1 ? "s" : ""}` : ""}
         </span>
         {/* Hidden anchor used by handleDownload — blob URLs need same-origin click */}
-        <a ref={downloadLinkRef} className="hidden" aria-hidden />
+        <a ref={downloadLinkRef} target="_blank" rel="noopener noreferrer" className="hidden" aria-hidden />
         <Button
           variant="ghost"
           size="sm"

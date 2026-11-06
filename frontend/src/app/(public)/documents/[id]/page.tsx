@@ -97,7 +97,7 @@ export default function DocumentDetailPage() {
                   {doc.annee && <Badge variant="outline" className="text-[10px]">{doc.annee}</Badge>}
                   {doc.pages && <span className="text-[10px] text-muted-foreground">{doc.pages} pages</span>}
                 </div>
-                <h1 className="text-lg font-bold leading-tight">{doc.titre}</h1>
+                <h1 className="text-lg font-bold leading-tight break-words">{doc.titre}</h1>
               </div>
 
               <Separator />
@@ -158,7 +158,7 @@ export default function DocumentDetailPage() {
 
             {/* Actions toujours visibles en bas */}
             <div className="flex-shrink-0 border-t border-border/60 p-4">
-              <a ref={downloadLinkRef} className="hidden" aria-hidden />
+              <a ref={downloadLinkRef} target="_blank" rel="noopener noreferrer" className="hidden" aria-hidden />
               <Button
                 className="w-full gap-2 bg-primary hover:bg-primary/90 h-9 text-sm"
                 onClick={handleDownload}

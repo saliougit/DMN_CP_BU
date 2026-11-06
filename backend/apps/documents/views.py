@@ -9,6 +9,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import Document, StatutDocument
 from .serializers import DocumentListSerializer, DocumentDetailSerializer, DocumentSoumissionSerializer
 from .filters import DocumentFilter
+from . import search as search_module
 
 
 class IsAdminRole(permissions.BasePermission):
@@ -51,6 +52,35 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.is_authenticated and mes:
             qs = qs.filter(soumis_par=user)
         return qs
+
+    def list(self, request, *args, **kwargs):
+        query = request.query_params.get("search", "").strip()
+        if not query:
+            return super().list(request, *args, **kwargs)
+
+        # Recherche plein texte via Meilisearch (tolerante aux fautes/accents,
+        # triee par pertinence) — les facettes (faculte/filiere/niveau/type/
+        # annee) sont appliquees dans l'index lui-meme, voir search_documents.
+        filters = {k: request.query_params.get(k) for k in ("faculte", "filiere", "niveau", "type", "annee")}
+        ids = search_module.search_documents(query, filters)
+
+        if ids is None:
+            # Meilisearch indisponible : on degrade vers la recherche SQL
+            # (icontains, SearchFilter) plutot que de casser la recherche du site.
+            return super().list(request, *args, **kwargs)
+
+        # Pas de filter_queryset() ici : SearchFilter réappliquerait un
+        # icontains strict sur `query` et écraserait les correspondances
+        # floues/tolérantes aux fautes que Meilisearch vient de trouver.
+        # Les facettes (faculté/filière/niveau/type/année) sont déjà
+        # appliquées côté index — get_queryset() ne fait que le scope de rôle.
+        order = {doc_id: i for i, doc_id in enumerate(ids)}
+        docs = list(self.get_queryset().filter(id__in=ids))
+        docs.sort(key=lambda d: order.get(str(d.id), len(ids)))
+
+        page = self.paginate_queryset(docs)
+        serializer = self.get_serializer(page if page is not None else docs, many=True)
+        return self.get_paginated_response(serializer.data) if page is not None else Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)

@@ -51,3 +51,33 @@ def delete_from_index(doc_id: str) -> None:
         _index().delete_document(str(doc_id))
     except Exception:
         pass
+
+
+def search_documents(query: str, filters: dict, limit: int = 200) -> list[str] | None:
+    """Recherche plein texte (tolerante aux fautes/accents) + facettes.
+
+    L'index ne contient que les documents approuves (voir index_document),
+    ce qui correspond exactement a ce que la recherche publique doit voir.
+    Retourne la liste des ids (ordonnes par pertinence), ou None si
+    Meilisearch est indisponible — le site retombe alors sur une recherche
+    SQL degradee plutot que de planter (voir DocumentViewSet.list).
+    """
+    clauses = []
+    for field in ("faculte", "filiere", "niveau", "type"):
+        value = filters.get(field)
+        if value:
+            escaped = str(value).replace('\\', '\\\\').replace('"', '\\"')
+            clauses.append(f'{field} = "{escaped}"')
+    annee = filters.get("annee")
+    if annee and str(annee).isdigit():
+        clauses.append(f"annee = {int(annee)}")
+
+    try:
+        result = _index().search(query, {
+            "filter": " AND ".join(clauses) if clauses else None,
+            "limit": limit,
+            "attributesToRetrieve": ["id"],
+        })
+        return [hit["id"] for hit in result["hits"]]
+    except Exception:
+        return None

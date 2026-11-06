@@ -21,9 +21,21 @@ function IconGitHub() {
 
 export function ContactDrawer() {
   const [open, setOpen] = useState(false)
+  // Masquage temporaire (pas persiste en localStorage) : revient au
+  // prochain chargement de page, contrairement a un simple "ne plus afficher".
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed) return null
 
   return (
     <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-stretch">
+      <button
+        onClick={() => setDismissed(true)}
+        title="Masquer (revient au prochain chargement)"
+        className="absolute -left-2.5 -top-2.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm transition-all hover:text-foreground hover:border-border"
+      >
+        <X className="h-3 w-3" />
+      </button>
       {/* Panel de contact — s'étend à gauche quand open */}
       {open && (
         <div className="flex flex-col gap-3 rounded-l-xl border border-r-0 border-border/60 bg-card px-4 py-4 shadow-md">

@@ -64,6 +64,44 @@ heredoc du workflow.
 5. Commit sur `main` - le prochain déploiement embarque la variable, pas
    besoin de se reconnecter au VPS.
 
+## Déploiement manuel (si GitHub Actions est indisponible)
+
+Si le pipeline est bloqué (ex: problème de facturation GitHub — message
+"We are having a problem billing your account", minutes Actions épuisées
+avec moyen de paiement refusé), on peut déployer directement depuis le VPS,
+sans Actions. C'est littéralement ce que fait `deploy-backend`/
+`deploy-frontend` côté SSH, juste exécuté à la main :
+
+```bash
+ssh -p 3765 root@164.68.98.73
+cd /opt/dmn-bu
+git fetch origin main
+git reset --hard origin/main
+chmod +x deploy/ci/deploy-service.sh
+./deploy/ci/deploy-service.sh backend
+./deploy/ci/deploy-service.sh frontend
+```
+
+Limite de cette méthode : `.env.production` n'est **pas** régénéré depuis
+les secrets GitHub (ça, c'est le pipeline qui le fait). Si une variable a
+changé entretemps (mot de passe, nouvelle clé...), il faut l'éditer à la
+main sur le VPS avant de relancer les conteneurs :
+
+```bash
+nano .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --force-recreate backend celery
+```
+
+⚠️ `docker compose restart` ne suffit pas pour appliquer un changement dans
+`.env.production` — il relance le conteneur existant avec l'environnement
+figé au moment de sa création. Il faut `up -d --force-recreate` (ou
+`--build` si le code a aussi changé) pour qu'il relise le fichier.
+
+Dès que GitHub Actions refonctionne, le prochain push régénère
+`.env.production` depuis les secrets et écrase toute correction manuelle —
+donc penser à répercuter tout changement fait à la main dans le secret
+GitHub correspondant pour que ça ne reparte pas en arrière.
+
 ## Sécurité et concurrence
 
 - `.env.production` : régénéré à chaque déploiement depuis les secrets

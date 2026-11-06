@@ -19,9 +19,7 @@ export const REVEAL_VARIANTS: Record<RevealVariant, VariantStyle> = {
   rise:        { out: "opacity-0 translate-y-20",  in: "opacity-100 translate-y-0", duration: "duration-1000" },
 }
 
-const THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20)
-
-function useReplayInView(baseMinRatio = 0.15) {
+function useReplayInView() {
   const ref = useRef<HTMLElement>(null)
   const [shown, setShown] = useState(false)
 
@@ -35,26 +33,22 @@ function useReplayInView(baseMinRatio = 0.15) {
       return
     }
 
+    // Un seuil de ratio (ex: "12% du bloc visible") echoue des qu'un bloc
+    // est plus haut que l'ecran — frequent sur mobile (viewport court, texte
+    // qui passe a la ligne) — car ce ratio reste alors inatteignable meme a
+    // 100% d'ecran rempli, et l'animation restait bloquee a l'etat invisible.
+    // isIntersecting seul (threshold 0) ne depend jamais de la hauteur du
+    // bloc : des qu'un pixel entre dans la zone visible, c'est declenche.
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry) return
-        const rootHeight = entry.rootBounds?.height ?? window.innerHeight
-        // Un bloc plus haut que l'ecran (frequent sur mobile, viewport
-        // court) ne peut jamais atteindre un ratio fixe calcule sur sa
-        // hauteur totale, meme rempli a 100% de l'ecran — l'animation
-        // restait bloquee a l'etat invisible. On mesure alors en pixels
-        // visibles (~1/4 d'ecran) plutot qu'en ratio global.
-        const minRatio =
-          entry.boundingClientRect.height > rootHeight
-            ? Math.min(0.35, (rootHeight * 0.25) / entry.boundingClientRect.height)
-            : baseMinRatio
-        setShown(entry.isIntersecting && entry.intersectionRatio >= minRatio)
+        setShown(entry.isIntersecting)
       },
-      { threshold: THRESHOLDS, rootMargin: "0px 0px -5% 0px" }
+      { threshold: 0, rootMargin: "0px 0px -8% 0px" }
     )
     observer.observe(node)
     return () => observer.disconnect()
-  }, [baseMinRatio])
+  }, [])
 
   return { ref, shown }
 }
@@ -66,7 +60,7 @@ function useReplayInView(baseMinRatio = 0.15) {
 export function SectionReveal({
   children, variant = "fade-up", delay = 0, className,
 }: { children: ReactNode; variant?: RevealVariant; delay?: number; className?: string }) {
-  const { ref, shown } = useReplayInView(0.12)
+  const { ref, shown } = useReplayInView()
   const style = REVEAL_VARIANTS[variant]
 
   return (
@@ -93,7 +87,7 @@ export function SectionReveal({
 export function SectionRevealItem({
   children, variant = "fade-up", delay = 0, as = "div", className,
 }: { children: ReactNode; variant?: RevealVariant; delay?: number; as?: ElementType; className?: string }) {
-  const { ref, shown } = useReplayInView(0.15)
+  const { ref, shown } = useReplayInView()
   const style = REVEAL_VARIANTS[variant]
   const Tag = as
 

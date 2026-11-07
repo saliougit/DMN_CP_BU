@@ -1,14 +1,18 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, Fragment } from "react"
 import {
   Search, Users, Mail, GraduationCap, BookOpen, Calendar,
-  RefreshCw, Plus, Loader2, Shield, UserRound, Lock, Eye, EyeOff, Bell, BellOff
+  RefreshCw, Plus, Loader2, Shield, UserRound, Lock, Eye, EyeOff, Bell, BellOff,
+  ChevronDown, ChevronUp, Info,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
@@ -57,6 +61,7 @@ export default function AdminMembresPage() {
   const [showSetPwdPanel, setShowSetPwdPanel] = useState(false)
   const [showSetPwdValue, setShowSetPwdValue] = useState(false)
   const [savingPwd, setSavingPwd] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function generatePassword(): string {
     const upper  = "ABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -205,43 +210,93 @@ export default function AdminMembresPage() {
           autoComplete="off" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {paginated.map((user) => (
-          <Card key={user.id} className="hover:shadow-sm transition-shadow cursor-pointer"
-            onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                    {getInitials(user.nom, user.prenom)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-tight">{user.prenom} {user.nom}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <Mail className="h-3 w-3" />
-                    <span className="truncate">{user.email}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-xs text-muted-foreground">
-                    {user.faculte && <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {user.faculte}</span>}
-                    {user.niveau && <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> {user.niveau}</span>}
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(user.createdAt)}</span>
-                  </div>
-                </div>
-                <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px] flex-shrink-0">
-                  {user.role === "admin" ? "Admin" : "Membre"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {filtres.length === 0 && (
-          <div className="col-span-full flex flex-col items-center py-16 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/20 mb-3" />
-            <p className="text-sm text-muted-foreground">Aucun membre trouvé</p>
-          </div>
-        )}
-      </div>
+      {filtres.length === 0 ? (
+        <div className="flex flex-col items-center py-16 text-center rounded-xl border-2 border-dashed border-border">
+          <Users className="h-10 w-10 text-muted-foreground/20 mb-3" />
+          <p className="text-sm text-muted-foreground">Aucun membre trouvé</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead>Membre</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Faculté</TableHead>
+                <TableHead className="hidden lg:table-cell">Niveau</TableHead>
+                <TableHead>Rôle</TableHead>
+                <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.map((user) => {
+                const expanded = expandedId === user.id
+                return (
+                  <Fragment key={user.id}>
+                    <TableRow className="hover:bg-muted/20">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                              {getInitials(user.nom, user.prenom)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-tight truncate">{user.prenom} {user.nom}</p>
+                            <p className="text-xs text-muted-foreground sm:hidden truncate">{user.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{user.email}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{user.faculte ?? "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{user.niveau ?? "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px]">
+                          {user.role === "admin" ? "Admin" : "Membre"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(user.createdAt)}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={() => setExpandedId(expanded ? null : user.id)}
+                          size="sm" variant="secondary"
+                          className="gap-1 text-xs h-8 shadow-none border-0"
+                          aria-expanded={expanded}
+                          aria-label={expanded ? `Replier ${user.prenom} ${user.nom}` : `Déplier ${user.prenom} ${user.nom}`}
+                        >
+                          {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
+                          Actions
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {expanded && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={7} className="p-0 bg-muted/10">
+                          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+                            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                              onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
+                              <Info className="h-3.5 w-3.5" /> Détails
+                            </Button>
+                            {user.role !== "admin" && (
+                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                                onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(true); setShowSetPwdValue(false) }}>
+                                <Lock className="h-3.5 w-3.5" /> Changer le mot de passe
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <PaginationBar />
       </div>

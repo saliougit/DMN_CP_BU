@@ -466,7 +466,17 @@ export default function AdminDocumentsPage() {
       </div>
 
       {/* Sheet : Ajouter un document */}
-      <Sheet open={sheetOpen} onOpenChange={(o) => { if (!o && !submitting) { setSheetOpen(false); resetForm() } }}>
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={(o, details) => {
+          if (o) return
+          if (details.reason === "outside-press" || details.reason === "escape-key" || details.reason === "focus-out") {
+            details.cancel()
+            return
+          }
+          if (!submitting) { setSheetOpen(false); resetForm() }
+        }}
+      >
         <SheetContent className="sm:max-w-2xl w-full p-0 flex flex-col">
           <SheetHeader className="px-6 pt-6 pb-0 flex-shrink-0">
             <SheetTitle>Ajouter des documents</SheetTitle>

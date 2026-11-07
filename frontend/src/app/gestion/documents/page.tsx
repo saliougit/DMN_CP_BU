@@ -173,7 +173,7 @@ export default function AdminDocumentsPage() {
           id: crypto.randomUUID(),
           file: f,
           titre: "",
-          auteur: parsed.auteur ?? "",
+          auteur: "",
           type: parsed.type ?? "memoire_master",
           faculte: parsed.faculte ?? "",
           filiere: parsed.filiere ?? "",
@@ -273,11 +273,36 @@ export default function AdminDocumentsPage() {
     return parts.join(" | ")
   }
 
+  // Un mémoire de licence ne doit pouvoir être classé que sur un niveau
+  // Licence, un mémoire de master que sur un niveau Master, etc. — évite
+  // les incohérences de classification (ex : "Mémoire Master" en "Licence 2").
+  const TYPE_NIVEAU_PREFIX: Record<string, string | null> = {
+    memoire_licence: "licence",
+    memoire_master: "master",
+    these_doctorat: "doctorat",
+    article: null,
+    rapport: null,
+  }
+
+  function niveauxPourType(type: string): Niveau[] {
+    const prefix = TYPE_NIVEAU_PREFIX[type]
+    if (!prefix) return niveaux
+    return niveaux.filter((n) => n.nom.toLowerCase().includes(prefix))
+  }
+
+  function niveauValidePourType(niveauId: string, type: string): boolean {
+    if (!niveauId) return true
+    return niveauxPourType(type).some((n) => n.id === niveauId)
+  }
+
   function updateFile(id: string, field: keyof FileEntry, value: string | number) {
     setFiles((prev) => {
       const next = prev.map((f) => {
         if (f.id !== id) return f
         const updated = { ...f, [field]: value }
+        if (field === "type" && !niveauValidePourType(updated.niveau, value as string)) {
+          updated.niveau = ""
+        }
         if (field === "auteur" || field === "type" || field === "annee") {
           updated.titre = computeTitre(updated)
         }
@@ -289,6 +314,46 @@ export default function AdminDocumentsPage() {
 
   const filieres = (faculteId: string) =>
     facultes.find((f) => f.id === faculteId)?.filieres ?? []
+
+  /** Propage un seul champ du bandeau "Classification commune" vers les
+   * fichiers ciblés (tous, ou la sélection si non vide) dès qu'il change —
+   * plus besoin de cliquer "Appliquer" pour voir et personnaliser le
+   * résultat fichier par fichier. */
+  function applyBulkField(field: keyof typeof bulk, value: string | number | boolean) {
+    setBulk((b) => {
+      if (field === "faculte") return { ...b, faculte: value as string, filiere: "" }
+      if (field === "type") {
+        const niveauOk = niveauValidePourType(b.niveau, value as string)
+        return { ...b, type: value as string, niveau: niveauOk ? b.niveau : "" }
+      }
+      return { ...b, [field]: value }
+    })
+
+    if (field === "applyAnnee" && !value) return // décoché : ne pas écraser les années déjà personnalisées
+
+    const targetAll = selectedIds.size === 0
+    setFiles((prev) => prev.map((f) => {
+      if (!targetAll && !selectedIds.has(f.id)) return f
+      if (f.status !== "pending" && f.status !== "error") return f
+      const updated = { ...f }
+      if (field === "type") {
+        updated.type = value as string
+        if (!niveauValidePourType(updated.niveau, updated.type)) updated.niveau = ""
+      } else if (field === "faculte") {
+        updated.faculte = value as string
+        updated.filiere = ""
+      } else if (field === "filiere") updated.filiere = value as string
+      else if (field === "niveau") updated.niveau = value as string
+      else if (field === "directeur") updated.directeur = value as string
+      else if (field === "annee") updated.annee = value as number
+      else if (field === "applyAnnee") updated.annee = bulk.annee
+      else return f
+      if (field === "type" || field === "annee" || field === "applyAnnee") {
+        updated.titre = computeTitre(updated)
+      }
+      return updated
+    }))
+  }
 
   /** Applique les champs communs (bandeau "Classification commune") aux
    * fichiers en attente — soit tous, soit uniquement ceux cochés quand le
@@ -543,40 +608,40 @@ export default function AdminDocumentsPage() {
                       </p>
                     )}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      <select value={bulk.type} onChange={(e) => setBulk((b) => ({ ...b, type: e.target.value }))}
+                      <select value={bulk.type} onChange={(e) => applyBulkField("type", e.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
                         {Object.entries(TYPE_LABELS).map(([v, l]) => (<option key={v} value={v}>{l}</option>))}
                       </select>
                       <select value={bulk.faculte}
-                        onChange={(e) => setBulk((b) => ({ ...b, faculte: e.target.value, filiere: "" }))}
+                        onChange={(e) => applyBulkField("faculte", e.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
                         <option value="">Faculté</option>
                         {facultes.map((f) => (<option key={f.id} value={f.id}>{f.nom}</option>))}
                       </select>
-                      <select value={bulk.filiere} onChange={(e) => setBulk((b) => ({ ...b, filiere: e.target.value }))}
+                      <select value={bulk.filiere} onChange={(e) => applyBulkField("filiere", e.target.value)}
                         disabled={!bulk.faculte}
                         className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                         <option value="">Filière</option>
                         {filieres(bulk.faculte).map((fi) => (<option key={fi.id} value={fi.id}>{fi.nom}</option>))}
                       </select>
-                      <select value={bulk.niveau} onChange={(e) => setBulk((b) => ({ ...b, niveau: e.target.value }))}
+                      <select value={bulk.niveau} onChange={(e) => applyBulkField("niveau", e.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary">
                         <option value="">Niveau</option>
-                        {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
+                        {niveauxPourType(bulk.type).map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                       </select>
                       <div className="flex items-center gap-1.5">
                         <Input type="number" value={bulk.annee} disabled={!bulk.applyAnnee}
-                          onChange={(e) => setBulk((b) => ({ ...b, annee: Number(e.target.value) }))}
+                          onChange={(e) => applyBulkField("annee", Number(e.target.value))}
                           className="h-8 text-xs disabled:opacity-40" placeholder="Année" />
                         <label className="flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0 cursor-pointer" title="Décocher si le lot mélange plusieurs promotions/années">
                           <input type="checkbox" checked={bulk.applyAnnee}
-                            onChange={(e) => setBulk((b) => ({ ...b, applyAnnee: e.target.checked }))}
+                            onChange={(e) => applyBulkField("applyAnnee", e.target.checked)}
                             className="h-3.5 w-3.5 accent-primary" />
                           incl.
                         </label>
                       </div>
                       <Input value={bulk.directeur}
-                        onChange={(e) => setBulk((b) => ({ ...b, directeur: e.target.value }))}
+                        onChange={(e) => applyBulkField("directeur", e.target.value)}
                         className="h-8 text-xs" placeholder="Directeur (optionnel)" />
                     </div>
                     <Button type="button" size="sm" variant="outline" className="gap-1.5 text-xs h-8 w-full"
@@ -677,7 +742,7 @@ export default function AdminDocumentsPage() {
                             disabled={locked || !entry.filiere}
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary disabled:opacity-50">
                             <option value="">Choisir</option>
-                            {niveaux.map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
+                            {niveauxPourType(entry.type).map((n) => (<option key={n.id} value={n.id}>{n.nom}</option>))}
                           </select>
                         </div>
                         <div className="space-y-1">

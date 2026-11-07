@@ -342,23 +342,34 @@ export default function AdminDocumentsPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input value={recherche} onChange={(e) => setRecherche(e.target.value)}
             placeholder="Rechercher dans le catalogue…" className="h-9 pl-9 rounded-lg text-sm" />
         </div>
-        <Select value={tri} onValueChange={(v) => setTri(v as SortKey)}>
-          <SelectTrigger className="h-9 w-48 text-xs gap-1.5">
-            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="recent" className="text-xs">Plus récents</SelectItem>
-            <SelectItem value="telecharges" className="text-xs">Plus téléchargés</SelectItem>
-            <SelectItem value="vus" className="text-xs">Plus consultés</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex w-full items-stretch rounded-lg border border-border bg-card sm:w-fit">
+          <Select value={tri} onValueChange={(v) => setTri(v as SortKey)}>
+            <SelectTrigger className="h-9 w-full min-w-44 rounded-none border-0 shadow-none gap-1.5 text-xs sm:w-auto">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent" className="text-xs">Plus récents</SelectItem>
+              <SelectItem value="telecharges" className="text-xs">Plus téléchargés</SelectItem>
+              <SelectItem value="vus" className="text-xs">Plus consultés</SelectItem>
+            </SelectContent>
+          </Select>
+          {tri !== "recent" && (
+            <>
+              <div aria-hidden className="w-px shrink-0 self-stretch bg-border" />
+              <button onClick={() => setTri("recent")} aria-label="Réinitialiser le tri"
+                className="flex items-center gap-1.5 rounded-r-lg bg-foreground px-3 text-xs font-medium text-background hover:bg-foreground/90 transition-colors">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden">

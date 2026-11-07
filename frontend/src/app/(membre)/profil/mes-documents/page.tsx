@@ -128,7 +128,7 @@ export default function MesDocumentsPage() {
       {/* Filtres : statut (segmenté, reset) + recherche */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center mb-6">
         <div className="flex w-full items-stretch rounded-lg border border-border bg-card sm:w-fit">
-          <Select value={statutFiltre || ALL} onValueChange={(v) => setStatutFiltre(v === ALL ? "" : v)}>
+          <Select value={statutFiltre || ALL} onValueChange={(v) => setStatutFiltre(v && v !== ALL ? v : "")}>
             <SelectTrigger aria-label="Statut" className="h-9 w-full min-w-40 rounded-none border-0 shadow-none sm:w-auto">
               <SelectValue>
                 {statutFiltre ? STATUT_OPTIONS.find((o) => o.value === statutFiltre)?.label : "Statut"}

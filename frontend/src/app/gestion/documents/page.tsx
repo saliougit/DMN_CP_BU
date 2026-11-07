@@ -39,6 +39,7 @@ interface FileEntry {
   directeur: string
   resume: string
   parsed: boolean // true si le nom a été parsé avec succès
+  touched: boolean // true dès qu'un champ a été édité à la main sur cette fiche
   status: "pending" | "uploading" | "done" | "error"
   error?: string
 }
@@ -182,6 +183,7 @@ export default function AdminDocumentsPage() {
           directeur: "",
           resume: "",
           parsed: parsed.parsed ?? false,
+          touched: false,
           status: "pending",
         }
       })
@@ -299,7 +301,7 @@ export default function AdminDocumentsPage() {
     setFiles((prev) => {
       const next = prev.map((f) => {
         if (f.id !== id) return f
-        const updated = { ...f, [field]: value }
+        const updated = { ...f, [field]: value, touched: true }
         if (field === "type" && !niveauValidePourType(updated.niveau, value as string)) {
           updated.niveau = ""
         }
@@ -334,6 +336,10 @@ export default function AdminDocumentsPage() {
     const targetAll = selectedIds.size === 0
     setFiles((prev) => prev.map((f) => {
       if (!targetAll && !selectedIds.has(f.id)) return f
+      // Une fiche personnalisée à la main est protégée des changements du
+      // bandeau commun — sauf si l'admin la coche explicitement pour
+      // forcer le réalignement sur le global.
+      if (targetAll && f.touched) return f
       if (f.status !== "pending" && f.status !== "error") return f
       const updated = { ...f }
       if (field === "type") {
@@ -367,6 +373,7 @@ export default function AdminDocumentsPage() {
     const targetAll = selectedIds.size === 0
     setFiles((prev) => prev.map((f) => {
       if (!targetAll && !selectedIds.has(f.id)) return f
+      if (targetAll && f.touched) return f
       if (f.status !== "pending" && f.status !== "error") return f
       const updated = {
         ...f,
@@ -679,6 +686,12 @@ export default function AdminDocumentsPage() {
                           {entry.parsed
                             ? <Badge className="text-[9px] bg-primary/10 text-primary border-primary/20">Auto-parsé</Badge>
                             : <Badge variant="outline" className="text-[9px] text-amber-600 border-amber-300">À compléter</Badge>}
+                          {files.length > 1 && entry.touched && (
+                            <Badge variant="outline" className="text-[9px] text-violet-600 border-violet-300"
+                              title="Personnalisée à la main — protégée des changements du bandeau commun tant qu'elle n'est pas cochée">
+                              Personnalisé
+                            </Badge>
+                          )}
                         </div>
                         {!locked && (
                           <button onClick={() => removeFile(entry.id)}

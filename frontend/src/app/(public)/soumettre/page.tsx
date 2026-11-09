@@ -35,6 +35,7 @@ interface FileEntry {
   annee: number
   parsed: boolean
   status: "pending" | "uploading" | "done" | "error"
+  progress: number
   error?: string
 }
 
@@ -120,6 +121,7 @@ export default function SoumettrePage() {
         annee,
         parsed: parsed.parsed,
         status: "pending",
+        progress: 0,
       }
     })
 
@@ -178,8 +180,10 @@ export default function SoumettrePage() {
         if (form.directeur) fd.append("directeur", form.directeur)
         if (form.resume) fd.append("resume", form.resume)
         fd.append("fichier", entry.file)
-        await api.soumettreDocument(fd)
-        setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "done" } : e))
+        await api.soumettreDocument(fd, (pct) =>
+          setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, progress: pct } : e))
+        )
+        setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "done", progress: 100 } : e))
         successCount++
       } catch (err: any) {
         setEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: "error", error: err?.message ?? "Erreur" } : e))
@@ -296,6 +300,19 @@ export default function SoumettrePage() {
                         min={1900} max={2100}
                       />
                     </div>
+                    {entry.status === "uploading" && (
+                      <div className="space-y-1">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-200"
+                            style={{ width: `${entry.progress}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {entry.progress < 100 ? `Envoi en cours… ${entry.progress}%` : "Finalisation…"}
+                        </p>
+                      </div>
+                    )}
                     {entry.status === "error" && entry.error && (
                       <p className="text-xs text-red-600 dark:text-red-400">{entry.error}</p>
                     )}

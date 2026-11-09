@@ -225,35 +225,48 @@ export default function AdminDocumentsPage() {
     }
     setSubmitting(true)
     let successCount = 0
+    const total = files.length
 
-    for (const entry of files) {
-      setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "uploading" } : f))
-      try {
-        const fd = new FormData()
-        fd.append("titre", entry.titre)
-        fd.append("auteur", entry.auteur)
-        fd.append("type", entry.type)
-        fd.append("faculte", entry.faculte)
-        fd.append("filiere", entry.filiere)
-        fd.append("niveau", entry.niveau)
-        fd.append("annee", String(entry.annee))
-        if (entry.directeur) fd.append("directeur", entry.directeur)
-        if (entry.resume) fd.append("resume", entry.resume)
-        fd.append("fichier", entry.file)
-        await api.uploadDocument(fd, (pct) =>
-          setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, progress: pct } : f))
-        )
-        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "done", progress: 100 } : f))
-        successCount++
-      } catch (err: any) {
-        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "error", error: err?.message ?? "Erreur" } : f))
+    // 2 envois en parallèle (sur 3 workers gunicorn) : accélère les lots de
+    // dizaines de fichiers sans monopoliser toute la capacité du serveur
+    // pour les autres visiteurs du site pendant l'import.
+    const CONCURRENCY = 2
+    const queue = [...files]
+
+    async function worker() {
+      let entry: FileEntry | undefined
+      while ((entry = queue.shift())) {
+        setFiles((prev) => prev.map((f) => f.id === entry!.id ? { ...f, status: "uploading" } : f))
+        try {
+          const fd = new FormData()
+          fd.append("titre", entry.titre)
+          fd.append("auteur", entry.auteur)
+          fd.append("type", entry.type)
+          fd.append("faculte", entry.faculte)
+          fd.append("filiere", entry.filiere)
+          fd.append("niveau", entry.niveau)
+          fd.append("annee", String(entry.annee))
+          if (entry.directeur) fd.append("directeur", entry.directeur)
+          if (entry.resume) fd.append("resume", entry.resume)
+          fd.append("fichier", entry.file)
+          const id = entry.id
+          await api.uploadDocument(fd, (pct) =>
+            setFiles((prev) => prev.map((f) => f.id === id ? { ...f, progress: pct } : f))
+          )
+          setFiles((prev) => prev.map((f) => f.id === id ? { ...f, status: "done", progress: 100 } : f))
+          successCount++
+        } catch (err: any) {
+          setFiles((prev) => prev.map((f) => f.id === entry!.id ? { ...f, status: "error", error: err?.message ?? "Erreur" } : f))
+        }
       }
     }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, () => worker()))
 
     setSubmitting(false)
     loadDocs()
 
-    if (successCount === files.length) {
+    if (successCount === total) {
       toast.success(`${successCount} document(s) publié(s) dans le catalogue`)
       setSheetOpen(false)
       resetForm()
@@ -261,7 +274,7 @@ export default function AdminDocumentsPage() {
       // On retire les documents déjà publiés : seuls les échecs restent à
       // corriger/relancer, pas de republication en double au prochain essai.
       setFiles((prev) => prev.filter((f) => f.status !== "done"))
-      toast.warning(`${successCount}/${files.length} documents publiés`, {
+      toast.warning(`${successCount}/${total} documents publiés`, {
         description: "Les autres ont échoué — corrigez si besoin et relancez la publication.",
       })
     } else {

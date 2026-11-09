@@ -1,9 +1,14 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import { CursorTrail, useCursorTrailEnabled } from "./cursor-trail"
 
 export function CursorTrailWrapper() {
+  const pathname = usePathname()
   const { enabled, toggle } = useCursorTrailEnabled()
+
+  // Pas d'effet curseur sur la partie admin : inutile pour un usage pro.
+  if (pathname?.startsWith("/gestion")) return null
 
   return (
     <>

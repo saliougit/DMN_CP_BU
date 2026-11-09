@@ -3,39 +3,19 @@
 
 {% block content %}
 
-  <p style="margin:0 0 28px;font-size:15px;color:#1a1a1a;line-height:1.8;">
-    Assalâmou Alaïkoum,<br />
-    <strong>{{ nom }}</strong>,
+  <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.8;">
+    Assalâmou Alaïkoum {{ nom }},
   </p>
 
-  <p style="margin:0 0 28px;font-size:14px;color:#444;line-height:1.9;">
-    Nous avons l'honneur de vous informer que votre document a été examiné
-    et <strong style="color:#1B6B2E;">approuvé</strong> par la Commission Pédagogique.
-    Il est désormais accessible à l'ensemble des membres de la bibliothèque numérique.
+  <p style="margin:0 0 24px;font-size:14px;color:#444;line-height:1.9;">
+    Bonne nouvelle&nbsp;: votre document «&nbsp;<strong>{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
+    ({{ doc.auteur }}{% if doc.annee %}, {{ doc.annee }}{% endif %}){% endif %} a été examiné et
+    <strong style="color:#1B6B2E;">approuvé</strong> par la Commission Pédagogique. Il est
+    désormais accessible à tous les membres de la bibliothèque.
   </p>
 
-  <!-- Document -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
-    <tr>
-      <td style="padding:20px 24px;background-color:#f7f6f2;">
-        <p style="margin:0 0 6px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#999;font-family:Arial,sans-serif;">
-          Document approuvé
-        </p>
-        <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.5;">
-          {{ doc.titre }}
-        </p>
-        {% if doc.auteur %}
-        <p style="margin:0;font-size:12px;color:#888;font-family:Arial,sans-serif;font-style:italic;">
-          {{ doc.auteur }}{% if doc.annee %} &middot; {{ doc.annee }}{% endif %}
-        </p>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
-
-  <p style="margin:0 0 40px;font-size:14px;color:#444;line-height:1.9;">
-    Nous vous remercions pour cette contribution et vous encourageons à
-    poursuivre vos travaux au service de la communauté.
+  <p style="margin:0 0 36px;font-size:14px;color:#444;line-height:1.9;">
+    Merci pour cette contribution — continuez ainsi, c'est précieux pour la communauté.
   </p>
 
   <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">

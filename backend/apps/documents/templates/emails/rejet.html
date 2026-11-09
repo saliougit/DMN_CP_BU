@@ -3,54 +3,26 @@
 
 {% block content %}
 
-  <p style="margin:0 0 28px;font-size:15px;color:#1a1a1a;line-height:1.8;">
-    Assalâmou Alaïkoum,<br />
-    <strong>{{ nom }}</strong>,
+  <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.8;">
+    Assalâmou Alaïkoum {{ nom }},
   </p>
 
-  <p style="margin:0 0 28px;font-size:14px;color:#444;line-height:1.9;">
-    Après examen de votre document, la Commission Pédagogique nous informe
-    qu'il ne peut être retenu dans la bibliothèque numérique en l'état actuel.
+  <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.9;">
+    Après examen, la Commission Pédagogique n'a pas pu retenir votre document
+    «&nbsp;<strong>{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
+    ({{ doc.auteur }}{% if doc.annee %}, {{ doc.annee }}{% endif %}){% endif %} dans la
+    bibliothèque numérique, en l'état actuel.
   </p>
-
-  <!-- Document -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-    <tr>
-      <td style="padding:20px 24px;background-color:#f7f6f2;">
-        <p style="margin:0 0 6px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#999;font-family:Arial,sans-serif;">
-          Document concerné
-        </p>
-        <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.5;">
-          {{ doc.titre }}
-        </p>
-        {% if doc.auteur %}
-        <p style="margin:0;font-size:12px;color:#888;font-family:Arial,sans-serif;font-style:italic;">
-          {{ doc.auteur }}{% if doc.annee %} &middot; {{ doc.annee }}{% endif %}
-        </p>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
 
   {% if doc.raison_rejet %}
-  <!-- Motif -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
-    <tr>
-      <td style="padding:20px 24px;background-color:#fafaf8;border:1px solid #e8e8e4;">
-        <p style="margin:0 0 8px;font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:#999;font-family:Arial,sans-serif;">
-          Observations
-        </p>
-        <p style="margin:0;font-size:14px;color:#444;line-height:1.8;font-style:italic;">
-          &laquo;&nbsp;{{ doc.raison_rejet }}&nbsp;&raquo;
-        </p>
-      </td>
-    </tr>
-  </table>
+  <p style="margin:0 0 28px;padding-left:16px;border-left:3px solid #e0ddd5;font-size:14px;color:#555;line-height:1.8;font-style:italic;">
+    {{ doc.raison_rejet }}
+  </p>
   {% endif %}
 
-  <p style="margin:0 0 40px;font-size:14px;color:#444;line-height:1.9;">
-    Nous vous invitons à prendre en compte ces remarques et à soumettre votre
-    document après révision. La Commission reste à votre disposition.
+  <p style="margin:0 0 36px;font-size:14px;color:#444;line-height:1.9;">
+    N'hésitez pas à en tenir compte et à nous le soumettre à nouveau après révision —
+    la Commission reste à votre disposition.
   </p>
 
   <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">

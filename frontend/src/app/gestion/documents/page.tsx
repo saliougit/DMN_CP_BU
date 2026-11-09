@@ -40,6 +40,7 @@ interface FileEntry {
   resume: string
   parsed: boolean // true si le nom a été parsé avec succès
   touched: boolean // true dès qu'un champ a été édité à la main sur cette fiche
+  progress: number
   status: "pending" | "uploading" | "done" | "error"
   error?: string
 }
@@ -184,6 +185,7 @@ export default function AdminDocumentsPage() {
           resume: "",
           parsed: parsed.parsed ?? false,
           touched: false,
+          progress: 0,
           status: "pending",
         }
       })
@@ -238,8 +240,10 @@ export default function AdminDocumentsPage() {
         if (entry.directeur) fd.append("directeur", entry.directeur)
         if (entry.resume) fd.append("resume", entry.resume)
         fd.append("fichier", entry.file)
-        await api.uploadDocument(fd)
-        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "done" } : f))
+        await api.uploadDocument(fd, (pct) =>
+          setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, progress: pct } : f))
+        )
+        setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "done", progress: 100 } : f))
         successCount++
       } catch (err: any) {
         setFiles((prev) => prev.map((f) => f.id === entry.id ? { ...f, status: "error", error: err?.message ?? "Erreur" } : f))
@@ -700,6 +704,20 @@ export default function AdminDocumentsPage() {
                           </button>
                         )}
                       </div>
+
+                      {entry.status === "uploading" && (
+                        <div className="space-y-1">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all duration-200"
+                              style={{ width: `${entry.progress}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {entry.progress < 100 ? `Envoi en cours… ${entry.progress}%` : "Finalisation…"}
+                          </p>
+                        </div>
+                      )}
 
                       {entry.status === "error" && entry.error && (
                         <p className="text-xs text-red-600 dark:text-red-400">{entry.error}</p>

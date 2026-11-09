@@ -21,6 +21,7 @@ import type { PickedNode } from "@/components/admin/submission-detail-drawer"
 import { api } from "@/lib/api"
 import type { Document } from "@/types"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
+import { formatDate } from "@/lib/utils"
 import { usePagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
 
@@ -201,7 +202,7 @@ export default function SoumissionsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {doc.soumisLe}</span>
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(doc.soumisLe)}</span>
                       </TableCell>
                       <TableCell>
                         <Button

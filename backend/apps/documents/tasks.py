@@ -96,6 +96,29 @@ def traiter_pdf(self, doc_id: str):
 
 
 @shared_task(queue="default", bind=True, max_retries=3)
+def indexer_document(self, doc_id: str):
+    """Indexe un document approuvé dans Meilisearch (hors requête HTTP :
+    un appel réseau synchrone ici risquerait de ralentir/timeout le clic
+    "Approuver" de l'admin si Meilisearch est lent ou temporairement down)."""
+    from .models import Document
+    from . import search
+    try:
+        doc = Document.objects.select_related("faculte", "filiere", "niveau").get(id=doc_id)
+    except Document.DoesNotExist:
+        return
+    search.index_document(doc)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
+def desindexer_document(self, doc_id: str):
+    """Retire un document de l'index Meilisearch (rejet ou suppression),
+    même raison que indexer_document : pas d'appel réseau synchrone dans
+    la requête HTTP."""
+    from . import search
+    search.delete_from_index(doc_id)
+
+
+@shared_task(queue="default", bind=True, max_retries=3)
 def notifier_admins_soumission(self, doc_id: str):
     from .models import Document
     try:

@@ -73,6 +73,31 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+function _uploadDocumentXHR(formData: FormData, onProgress?: (pct: number) => void): Promise<Document> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", `${API_URL}/documents/`)
+    xhr.setRequestHeader("Authorization", `Bearer ${tokens.getAccess()}`)
+    xhr.upload.onprogress = (e) => {
+      if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      let body: Record<string, unknown> = {}
+      try { body = JSON.parse(xhr.responseText) } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(mapDocument(body))
+      } else {
+        const msg = (body.detail as string | undefined)
+          ?? (Object.values(body).flat().find((v) => typeof v === "string") as string | undefined)
+          ?? `Erreur ${xhr.status}`
+        reject(new Error(msg))
+      }
+    }
+    xhr.onerror = () => reject(new Error("Erreur réseau"))
+    xhr.send(formData)
+  })
+}
+
 // ─── Mapping Django → types frontend ─────────────────────────────────────────
 
 function publicMinioUrl(url: string | undefined): string | undefined {
@@ -190,32 +215,14 @@ export const api = {
   getNiveaux: (): Promise<Niveau[]> =>
     fetchApi<Niveau[]>("/niveaux/"),
 
-  // Soumission membre — XHR (pas fetch) pour exposer la progression réelle
-  // de l'upload : un gros PDF sur une connexion lente peut prendre un bon
-  // moment, mieux vaut un pourcentage qu'un spinner figé sans indication.
+  // Soumission membre / upload admin — XHR (pas fetch) pour exposer la
+  // progression réelle de l'upload : un gros PDF sur une connexion lente
+  // peut prendre un bon moment, mieux vaut un pourcentage visible qu'un
+  // spinner figé sans indication. Chaque fichier part dans sa propre
+  // requête HTTP (jamais un gros POST multi-fichiers), donc pas de risque
+  // de cumul vers le timeout nginx (120s) même en import multiple.
   soumettreDocument: (formData: FormData, onProgress?: (pct: number) => void): Promise<Document> =>
-    new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open("POST", `${API_URL}/documents/`)
-      xhr.setRequestHeader("Authorization", `Bearer ${tokens.getAccess()}`)
-      xhr.upload.onprogress = (e) => {
-        if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
-      }
-      xhr.onload = () => {
-        let body: Record<string, unknown> = {}
-        try { body = JSON.parse(xhr.responseText) } catch {}
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(mapDocument(body))
-        } else {
-          const msg = (body.detail as string | undefined)
-            ?? (Object.values(body).flat().find((v) => typeof v === "string") as string | undefined)
-            ?? `Erreur ${xhr.status}`
-          reject(new Error(msg))
-        }
-      }
-      xhr.onerror = () => reject(new Error("Erreur réseau"))
-      xhr.send(formData)
-    }),
+    _uploadDocumentXHR(formData, onProgress),
 
   // Admin — workflow
   getSoumissions: (): Promise<Document[]> =>
@@ -229,12 +236,8 @@ export const api = {
     fetchApi(`/documents/${id}/rejeter/`, { method: "POST", body: JSON.stringify({ raison }) }, true),
 
   // Admin — upload direct
-  uploadDocument: (formData: FormData): Promise<Document> =>
-    fetch(`${API_URL}/documents/`, {
-      method:  "POST",
-      headers: { Authorization: `Bearer ${tokens.getAccess()}` },
-      body:    formData,
-    }).then((r) => r.json()).then(mapDocument),
+  uploadDocument: (formData: FormData, onProgress?: (pct: number) => void): Promise<Document> =>
+    _uploadDocumentXHR(formData, onProgress),
 
   // Stats publiques (sans auth)
   getPublicStats: (): Promise<{ totalDocuments: number; totalFacultes: number; totalMembres: number }> =>

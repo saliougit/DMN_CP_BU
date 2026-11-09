@@ -21,8 +21,9 @@
           <tr>
             <td style="padding:40px 48px 28px;text-align:center;border-bottom:1px solid #ebebeb;">
 
-              <!-- Logo CID -->
-              <img src="cid:dmn_logo" alt="DMN-BN"
+              <!-- Logo (URL publique - les pieces jointes inline/CID ne sont plus
+                   supportees proprement par Django 6, voir _send() dans tasks.py) -->
+              <img src="{{ logo_url }}" alt="DMN-BN"
                    width="80" height="80"
                    style="display:block;margin:0 auto 20px;border-radius:4px;" />
 

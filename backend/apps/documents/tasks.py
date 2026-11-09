@@ -1,6 +1,4 @@
 import logging
-import os
-from email.mime.image import MIMEImage
 
 from celery import shared_task
 from django.conf import settings
@@ -9,12 +7,13 @@ from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
-_LOGO_PATH = os.path.join(
-    os.path.dirname(__file__), "templates", "emails", "logo.png"
-)
-
 
 def _send(subject: str, template: str, context: dict, recipient: str):
+    # Logo en URL publique plutot qu'en piece jointe CID : Django 6 a retire
+    # le support de `mixed_subtype` (necessaire pour un multipart/related),
+    # et attacher un fichier force de toute facon un multipart/mixed - donc
+    # plus simple et plus fiable de pointer vers l'image hebergee.
+    context = {**context, "logo_url": f"{settings.FRONTEND_URL}/logo.png"}
     html = render_to_string(template, context)
     text = f"Assalâmou Alaïkoum,\n\n{subject}"
 
@@ -29,17 +28,6 @@ def _send(subject: str, template: str, context: dict, recipient: str):
         to=[recipient],
     )
     msg.attach_alternative(html, "text/html")
-    # multipart/related pour que Gmail affiche le logo en CID inline plutôt
-    # qu'en pièce jointe séparée.
-    msg.mixed_subtype = "related"
-
-    if os.path.exists(_LOGO_PATH):
-        with open(_LOGO_PATH, "rb") as f:
-            img = MIMEImage(f.read())
-        img.add_header("Content-ID", "<dmn_logo>")
-        img.add_header("Content-Disposition", "inline", filename="logo.png")
-        msg.attach(img)
-
     msg.send()
 
 

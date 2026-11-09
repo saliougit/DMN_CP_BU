@@ -1,12 +1,10 @@
 import logging
 import os
 from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from celery import shared_task
 from django.conf import settings
-from django.core.mail import get_connection
+from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
@@ -20,32 +18,29 @@ def _send(subject: str, template: str, context: dict, recipient: str):
     html = render_to_string(template, context)
     text = f"Assalâmou Alaïkoum,\n\n{subject}"
 
-    # multipart/related so Gmail shows the CID logo inline
-    outer = MIMEMultipart("related")
-    outer["Subject"] = subject
-    outer["From"] = settings.DEFAULT_FROM_EMAIL
-    outer["To"] = recipient
-
-    alt = MIMEMultipart("alternative")
-    alt.attach(MIMEText(text, "plain", "utf-8"))
-    alt.attach(MIMEText(html, "html", "utf-8"))
-    outer.attach(alt)
+    # EmailMultiAlternatives (plutôt que des objets email.mime construits à
+    # la main) pour que Django ajoute les en-têtes Date/Message-ID requis —
+    # un message qui en est dépourvu est accepté sans erreur par le relais
+    # SMTP mais silencieusement jeté par Gmail, sans même atterrir en spam.
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+    )
+    msg.attach_alternative(html, "text/html")
+    # multipart/related pour que Gmail affiche le logo en CID inline plutôt
+    # qu'en pièce jointe séparée.
+    msg.mixed_subtype = "related"
 
     if os.path.exists(_LOGO_PATH):
         with open(_LOGO_PATH, "rb") as f:
             img = MIMEImage(f.read())
         img.add_header("Content-ID", "<dmn_logo>")
         img.add_header("Content-Disposition", "inline", filename="logo.png")
-        outer.attach(img)
+        msg.attach(img)
 
-    conn = get_connection()
-    conn.open()
-    conn.connection.sendmail(
-        settings.EMAIL_HOST_USER,
-        [recipient],
-        outer.as_string(),
-    )
-    conn.close()
+    msg.send()
 
 
 def _get_admin_recipients(flag: str):

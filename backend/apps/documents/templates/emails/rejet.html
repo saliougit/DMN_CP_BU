@@ -1,33 +1,32 @@
 {% extends "emails/base.html" %}
 {% block subject %}Décision de la Commission Pédagogique — {{ doc.titre }}{% endblock %}
+{% block preheader %}La Commission Pédagogique n'a pas pu retenir votre document en l'état actuel.{% endblock %}
 
 {% block content %}
 
-  <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.8;">
-    Assalâmou Alaïkoum {{ nom }},
-  </p>
+  <p style="margin:0 0 18px 0;">Assalâmou Alaïkoum {{ nom }},</p>
 
-  <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.9;">
+  <p style="margin:0 0 20px 0;">
     Après examen, la Commission Pédagogique n'a pas pu retenir votre document
-    «&nbsp;<strong>{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
+    «&nbsp;<strong style="color:#1f2a1c;">{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
     ({{ doc.auteur }}{% if doc.annee %}, {{ doc.annee }}{% endif %}){% endif %} dans la
     bibliothèque numérique, en l'état actuel.
   </p>
 
   {% if doc.raison_rejet %}
-  <p style="margin:0 0 28px;padding-left:16px;border-left:3px solid #e0ddd5;font-size:14px;color:#555;line-height:1.8;font-style:italic;">
+  <p style="margin:0 0 24px 0;padding-left:16px;border-left:3px solid #e3e6df;font-style:italic;color:#5d6758;">
     {{ doc.raison_rejet }}
   </p>
   {% endif %}
 
-  <p style="margin:0 0 36px;font-size:14px;color:#444;line-height:1.9;">
+  <p style="margin:0 0 32px 0;">
     N'hésitez pas à en tenir compte et à nous le soumettre à nouveau après révision —
     la Commission reste à votre disposition.
   </p>
 
-  <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">
-    Dieureudieuf Mouride,<br />
-    <strong>La Commission Pédagogique</strong>
+  <p style="margin:0 0 32px 0;">
+    Dieureudieuf,<br>
+    La Commission Pédagogique
   </p>
 
 {% endblock %}

@@ -1,4 +1,5 @@
 import logging
+from email.utils import parseaddr
 
 from celery import shared_task
 from django.conf import settings
@@ -13,7 +14,11 @@ def _send(subject: str, template: str, context: dict, recipient: str):
     # le support de `mixed_subtype` (necessaire pour un multipart/related),
     # et attacher un fichier force de toute facon un multipart/mixed - donc
     # plus simple et plus fiable de pointer vers l'image hebergee.
-    context = {**context, "logo_url": f"{settings.FRONTEND_URL}/logo.png"}
+    context = {
+        **context,
+        "logo_url": f"{settings.FRONTEND_URL}/logo.png",
+        "email_contact": parseaddr(settings.DEFAULT_FROM_EMAIL)[1],
+    }
     html = render_to_string(template, context)
     text = f"Assalâmou Alaïkoum,\n\n{subject}"
 

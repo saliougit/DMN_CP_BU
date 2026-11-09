@@ -1,78 +1,68 @@
 ﻿<!DOCTYPE html>
-<html lang="fr" dir="ltr">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block subject %}DMN-BN{% endblock %}</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{% block subject %}DMN-BN{% endblock %}</title>
+<style>
+  @media (max-width: 620px) {
+    .container { width: 100% !important; }
+    .pad { padding-left: 24px !important; padding-right: 24px !important; }
+  }
+  a.btn:hover { background: #2f5428 !important; }
+</style>
 </head>
-<body style="margin:0;padding:0;background-color:#f0efeb;font-family:Georgia,'Times New Roman',serif;">
+<body style="margin:0; padding:0; background:#eceee9;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0efeb;padding:48px 16px;">
-    <tr>
-      <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;">
+<!-- Texte d'aperçu (visible dans la liste des mails) -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+  {% block preheader %}{% endblock %}
+</div>
 
-          <!-- Barre verte superieure -->
-          <tr>
-            <td style="background-color:#1B6B2E;height:5px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eceee9;">
+  <tr>
+    <td align="center" style="padding:32px 12px;">
 
-          <!-- En-tete -->
-          <tr>
-            <td style="padding:40px 48px 28px;text-align:center;border-bottom:1px solid #ebebeb;">
+      <table role="presentation" class="container" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px; background:#ffffff; border-radius:6px; overflow:hidden;">
 
-              <!-- Logo (URL publique - les pieces jointes inline/CID ne sont plus
-                   supportees proprement par Django 6, voir _send() dans tasks.py) -->
-              <img src="{{ logo_url }}" alt="DMN-BN"
-                   width="80" height="80"
-                   style="display:block;margin:0 auto 20px;border-radius:4px;" />
+        <!-- En-tête -->
+        <tr>
+          <td class="pad" style="padding:28px 40px 22px 40px; border-bottom:1px solid #e3e6df;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle" style="padding-right:14px;">
+                  <img src="{{ logo_url }}" width="48" height="48" alt="DMN UCAD" style="display:block; border:0;">
+                </td>
+                <td valign="middle" style="font-family:'Segoe UI', Helvetica, Arial, sans-serif;">
+                  <div style="font-size:16px; font-weight:600; color:#1f2a1c;">Bibliothèque numérique</div>
+                  <div style="font-size:13px; color:#6b7566; padding-top:2px;">Daara Madjmahoun Noreyni, UCAD</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-              <!-- Texte arabe -->
-              <p style="margin:0 0 6px;font-size:15px;color:#1B6B2E;direction:rtl;font-family:Arial,sans-serif;letter-spacing:0.5px;">
-                &#1583;&#1575;&#1585; &#1605;&#1580;&#1605;&#1593; &#1575;&#1604;&#1606;&#1608;&#1585;&#1610;&#1606;
-              </p>
+        <!-- Corps -->
+        <tr>
+          <td class="pad" style="padding:32px 40px 8px 40px; font-family:'Segoe UI', Helvetica, Arial, sans-serif; color:#2b3328; font-size:15px; line-height:1.65;">
+            {% block content %}{% endblock %}
+          </td>
+        </tr>
 
-              <!-- Nom latin -->
-              <p style="margin:0 0 2px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#888;font-family:Arial,sans-serif;">
-                Daara Madjmahoun Noreyni &middot; UCAD
-              </p>
-              <p style="margin:0;font-size:17px;font-weight:700;color:#1a1a1a;letter-spacing:2px;font-family:Arial,sans-serif;">
-                DMN&thinsp;&mdash;&thinsp;BN
-              </p>
-              <p style="margin:4px 0 0;font-size:9px;color:#aaa;letter-spacing:1.5px;font-family:Arial,sans-serif;text-transform:uppercase;">
-                Biblioth&egrave;que Num&eacute;rique
-              </p>
-            </td>
-          </tr>
+        <!-- Pied de page -->
+        <tr>
+          <td class="pad" style="padding:20px 40px 24px 40px; background:#f7f8f5; border-top:1px solid #e3e6df; font-family:'Segoe UI', Helvetica, Arial, sans-serif; font-size:12px; line-height:1.6; color:#8a9385;">
+            Daara Madjmahoun Noreyni, Université Cheikh Anta Diop de Dakar.<br>
+            Ce message est envoyé automatiquement, merci de ne pas y répondre.
+          </td>
+        </tr>
 
-          <!-- Corps -->
-          <tr>
-            <td style="padding:40px 48px 44px;">
-              {% block content %}{% endblock %}
-            </td>
-          </tr>
+      </table>
 
-          <!-- Pied de page -->
-          <tr>
-            <td style="padding:20px 48px 28px;text-align:center;border-top:1px solid #ebebeb;">
-              <p style="margin:0;font-size:10px;color:#bbb;font-family:Arial,sans-serif;line-height:1.8;letter-spacing:0.3px;">
-                Commission P&eacute;dagogique &middot; Daara Madjmahoun Noreyni<br />
-                Universit&eacute; Cheikh Anta Diop &middot; Dakar, S&eacute;n&eacute;gal<br />
-                <br />
-                Cet e-mail est envoy&eacute; automatiquement, merci de ne pas y r&eacute;pondre.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Barre verte inferieure -->
-          <tr>
-            <td style="background-color:#1B6B2E;height:5px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+    </td>
+  </tr>
+</table>
 
 </body>
 </html>

@@ -1,43 +1,45 @@
 {% extends "emails/base.html" %}
-{% block subject %}[DMN-BN] Votre mot de passe a été modifié{% endblock %}
+{% block subject %}Votre mot de passe a été modifié{% endblock %}
+{% block preheader %}Un administrateur a modifié votre mot de passe. Voici vos nouveaux identifiants.{% endblock %}
 
 {% block content %}
 
-  <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.8;">
-    Assalâmou Alaïkoum {{ nom }},
+  <p style="margin:0 0 18px 0;">Assalâmou Alaïkoum {{ nom }},</p>
+
+  <p style="margin:0 0 24px 0;">
+    Un administrateur vient de modifier le mot de passe de votre compte.
+    Voici les identifiants à utiliser pour vous connecter :
   </p>
 
-  <p style="margin:0 0 20px;font-size:14px;color:#444;line-height:1.9;">
-    Un administrateur vient de mettre à jour votre mot de passe sur la Bibliothèque
-    Numérique DMN-BN.
+  <p style="margin:0; padding-left:16px;">
+    Identifiant : <strong style="color:#1f2a1c;">{{ username }}</strong><br>
+    Mot de passe : <strong style="color:#1f2a1c;">{{ password }}</strong>
   </p>
 
-  <p style="margin:0 0 8px;font-size:14px;color:#1a1a1a;line-height:1.9;">
-    Votre identifiant reste <strong>{{ username }}</strong>, et votre nouveau mot de
-    passe est <strong>{{ password }}</strong>.
+  <p style="margin:24px 0 28px 0;">
+    Pensez à le remplacer par un mot de passe personnel dès votre prochaine connexion,
+    depuis la page <em>Mon profil</em>.
   </p>
 
-  <p style="margin:0 0 32px;font-size:13px;color:#888;line-height:1.8;font-style:italic;">
-    Si cette demande ne vient pas de vous, écrivez-nous au plus vite pour qu'on règle
-    ça ensemble.
-  </p>
-
-  <!-- Bouton connexion -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
     <tr>
-      <td align="center">
-        <a href="{{ login_url }}"
-           style="display:inline-block;padding:13px 36px;background-color:#1B6B2E;color:#ffffff;
-                  text-decoration:none;font-size:14px;font-weight:600;font-family:Arial,sans-serif;">
-          Se connecter
+      <td style="border-radius:4px; background:#3f6b35;">
+        <a class="btn" href="{{ login_url }}" target="_blank"
+           style="display:inline-block; padding:12px 26px; font-family:'Segoe UI', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:4px; background:#3f6b35;">
+          Se connecter à la bibliothèque
         </a>
       </td>
     </tr>
   </table>
 
-  <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">
-    Dieureudieuf Mouride,<br />
-    <strong>La Commission Pédagogique</strong>
+  <p style="margin:32px 0 0 0; font-size:14px; color:#5d6758;">
+    Vous n'êtes pas à l'origine de cette demande&nbsp;? Contactez-nous rapidement à
+    <a href="mailto:{{ email_contact }}" style="color:#3f6b35;">{{ email_contact }}</a>.
+  </p>
+
+  <p style="margin:28px 0 32px 0;">
+    Dieureudieuf,<br>
+    La Commission Pédagogique
   </p>
 
 {% endblock %}

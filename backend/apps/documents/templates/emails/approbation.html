@@ -1,26 +1,25 @@
 {% extends "emails/base.html" %}
 {% block subject %}Approbation de votre document — {{ doc.titre }}{% endblock %}
+{% block preheader %}Votre document a été examiné et approuvé par la Commission Pédagogique.{% endblock %}
 
 {% block content %}
 
-  <p style="margin:0 0 24px;font-size:15px;color:#1a1a1a;line-height:1.8;">
-    Assalâmou Alaïkoum {{ nom }},
-  </p>
+  <p style="margin:0 0 18px 0;">Assalâmou Alaïkoum {{ nom }},</p>
 
-  <p style="margin:0 0 24px;font-size:14px;color:#444;line-height:1.9;">
-    Bonne nouvelle&nbsp;: votre document «&nbsp;<strong>{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
+  <p style="margin:0 0 24px 0;">
+    Bonne nouvelle&nbsp;: votre document «&nbsp;<strong style="color:#1f2a1c;">{{ doc.titre }}</strong>&nbsp;»{% if doc.auteur %}
     ({{ doc.auteur }}{% if doc.annee %}, {{ doc.annee }}{% endif %}){% endif %} a été examiné et
-    <strong style="color:#1B6B2E;">approuvé</strong> par la Commission Pédagogique. Il est
+    <strong style="color:#3f6b35;">approuvé</strong> par la Commission Pédagogique. Il est
     désormais accessible à tous les membres de la bibliothèque.
   </p>
 
-  <p style="margin:0 0 36px;font-size:14px;color:#444;line-height:1.9;">
+  <p style="margin:0 0 32px 0;">
     Merci pour cette contribution — continuez ainsi, c'est précieux pour la communauté.
   </p>
 
-  <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.8;">
-    Dieureudieuf Mouride,<br />
-    <strong>La Commission Pédagogique</strong>
+  <p style="margin:0 0 32px 0;">
+    Dieureudieuf,<br>
+    La Commission Pédagogique
   </p>
 
 {% endblock %}

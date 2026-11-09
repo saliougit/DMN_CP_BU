@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
+import { DmnLoader } from "@/components/ui/dmn-loader"
 
 interface AuthGuardProps {
   children: ReactNode
@@ -27,11 +27,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   }, [isLoading, isAuthenticated, user, requiredRole, router])
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    )
+    return <DmnLoader fullscreen size="lg" />
   }
 
   if (!isAuthenticated) return null

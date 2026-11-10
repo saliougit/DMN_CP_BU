@@ -66,11 +66,23 @@ Rien ne forçait le navigateur à rester en HTTPS sur ce domaine.
 
 ## Vérification à faire après déploiement (checklist)
 
-Déployé le 2026-11-10, logs de `storage-init` confirmés (`Access permission for local/dmn-bu-documents is set to private`). Tests fonctionnels **pas encore faits** — à faire dès que possible :
+Déployé le 2026-11-10, logs de `storage-init` confirmés (`Access permission for local/dmn-bu-documents is set to private`).
 
-- [ ] Ouvrir/télécharger un document existant (membre + public) → doit toujours marcher normalement.
+- [x] Ouvrir/télécharger un document existant (membre + public) → **cassé au premier essai** ("Impossible de charger le PDF"), corrigé le 2026-11-10 (voir incident ci-dessous), **re-testé OK**.
 - [ ] Prendre l'URL d'un fichier dans l'onglet réseau du navigateur, retirer tout ce qui suit le `?` (donc sans signature), l'ouvrir en navigation privée → doit donner une erreur d'accès refusé.
 - [ ] Se tromper de mot de passe 10+ fois rapidement sur la connexion → doit finir par renvoyer "trop de tentatives" (429).
 - [ ] Soumettre un fichier `.txt` renommé en `.pdf` → doit être rejeté.
 
-**Si le téléchargement/la prévisualisation casse** après déploiement : le point le plus fragile est le header `Host` figé dans `deploy/nginx/storage-bnumerique.dmnucad.com.conf` — vérifier qu'il a bien été rechargé (`nginx -t && reload`, ou recréer le conteneur/service nginx selon comment il tourne).
+### ⚠️ Incident post-déploiement (2026-11-10) — config nginx non synchronisée
+
+Après déploiement, la prévisualisation/téléchargement des PDF ne fonctionnait plus ("Impossible de charger le PDF").
+
+**Cause** : le fichier nginx réellement actif sur le VPS est `/etc/nginx/sites-available/storage-bnumerique.dmnucad.com` (sans extension `.conf`, nom différent de celui du repo). **Les fichiers sous `deploy/nginx/` ne sont pas automatiquement copiés/synchronisés vers `/etc/nginx/sites-available/` au déploiement** — c'est un suivi manuel. Le correctif du header `Host` figé n'avait donc jamais atteint la config nginx réelle, qui envoyait encore `Host $host` à MinIO → signature SigV4 invalide côté MinIO → 403 → échec de chargement du PDF.
+
+**Fix appliqué manuellement sur le VPS** :
+```bash
+sed -i 's/proxy_set_header Host \$host;/proxy_set_header Host storage:9000;/' /etc/nginx/sites-available/storage-bnumerique.dmnucad.com
+nginx -t && systemctl reload nginx
+```
+
+**⚠️ À retenir pour tout futur changement dans `deploy/nginx/*.conf`** : ces fichiers ne servent aujourd'hui que de référence/historique dans le repo — **toute modification doit être recopiée manuellement** vers le fichier réellement chargé par nginx sur le VPS (`/etc/nginx/sites-available/<nom-sans-.conf>`), sinon le changement n'a aucun effet en prod malgré un déploiement "réussi". Idéalement, à terme, faire pointer `/etc/nginx/sites-available/` vers les fichiers du repo (symlink) pour éliminer ce risque de dérive.

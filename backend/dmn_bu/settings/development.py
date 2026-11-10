@@ -3,6 +3,7 @@ from .base import *
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
+MINIO_URL_PROTOCOL = "http:"
 
 # EMAIL_BACKEND est contrôlé par SEND_REAL_EMAILS dans .env :
 #   SEND_REAL_EMAILS=True  → SMTP réel
@@ -18,11 +19,9 @@ STORAGES = {
             "access_key":    MINIO_ACCESS_KEY,
             "secret_key":    MINIO_SECRET_KEY,
             "bucket_name":   MINIO_BUCKET,
-            "default_acl":   "public-read",
+            "default_acl":   "private",
             "use_ssl":       False,
             "file_overwrite": False,
-            "url_protocol":  "http:",
-            "custom_domain": f"{MINIO_PUBLIC_ENDPOINT}/{MINIO_BUCKET}",
         },
     },
     "staticfiles": {

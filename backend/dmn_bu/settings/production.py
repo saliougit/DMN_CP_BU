@@ -9,6 +9,12 @@ SECURE_BROWSER_XSS_FILTER   = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# HSTS : force le navigateur à toujours revenir en HTTPS sur ce domaine,
+# même si un lien/bookmark pointe en http. 180 jours (pas de preload — trop
+# définitif pour un premier rollout, difficile à annuler ensuite).
+SECURE_HSTS_SECONDS = 15552000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
 # Nginx (sur l'hôte) relaie /minio/ en HTTPS vers le domaine public —
 # les URLs renvoyées au frontend doivent donc être en https, même si la
 # connexion interne backend → conteneur MinIO reste en http (réseau Docker).
@@ -49,7 +55,11 @@ LOGGING = {
     },
 }
 
-# Fichiers uploadés → MinIO (API S3 interne au réseau Docker)
+# Fichiers uploadés → MinIO (API S3 interne au réseau Docker). Bucket privé
+# (pas d'ACL public-read, pas de policy anonyme côté MinIO — voir
+# docker-compose.prod.yml::storage-init) : l'accès se fait uniquement via
+# des URLs signées à durée limitée générées par apps/documents/storage_utils.py,
+# jamais via une URL publique permanente.
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
@@ -58,11 +68,9 @@ STORAGES = {
             "access_key":    MINIO_ACCESS_KEY,
             "secret_key":    MINIO_SECRET_KEY,
             "bucket_name":   MINIO_BUCKET,
-            "default_acl":   "public-read",
+            "default_acl":   "private",
             "use_ssl":       False,
             "file_overwrite": False,
-            "url_protocol":  "https:",
-            "custom_domain": f"{MINIO_PUBLIC_ENDPOINT}/{MINIO_BUCKET}",
         },
     },
     "staticfiles": {

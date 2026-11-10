@@ -4,12 +4,20 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from .models import User
 from .serializers import UserSerializer, RegisterSerializer
 
 _token_generator = PasswordResetTokenGenerator()
+
+
+class LoginView(TokenObtainPairView):
+    """Identique à TokenObtainPairView, avec un scope de throttle dédié —
+    voir DEFAULT_THROTTLE_RATES['login'] (settings/base.py) : limite les
+    tentatives de brute-force sur /auth/token/."""
+    throttle_scope = "login"
 
 
 class IsAdminRole(permissions.BasePermission):
@@ -81,6 +89,7 @@ class MembresListView(generics.ListCreateAPIView):
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "register"
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
@@ -94,6 +103,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 class PasswordResetRequestView(APIView):
     """Génère un token et envoie l'email de réinitialisation."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
@@ -122,6 +132,7 @@ class PasswordResetRequestView(APIView):
 class PasswordResetConfirmView(APIView):
     """Valide le token et enregistre le nouveau mot de passe."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         uid      = request.data.get("uid", "")

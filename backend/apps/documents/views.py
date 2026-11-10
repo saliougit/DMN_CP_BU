@@ -9,6 +9,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import Document, StatutDocument
 from .serializers import DocumentListSerializer, DocumentDetailSerializer, DocumentSoumissionSerializer
 from .filters import DocumentFilter
+from .storage_utils import presigned_file_url
 from . import search as search_module
 
 
@@ -121,7 +122,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not doc.fichier:
             return Response({"detail": "Aucun fichier."}, status=status.HTTP_404_NOT_FOUND)
         Document.objects.filter(pk=doc.pk).update(nb_telechargements=F("nb_telechargements") + 1)
-        return Response({"url": doc.fichier.url})
+        return Response({"url": presigned_file_url(doc.fichier.name)})
 
 
 class PublicStatsView(generics.GenericAPIView):

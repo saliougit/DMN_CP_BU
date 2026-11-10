@@ -1,4 +1,5 @@
 import uuid
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 
@@ -42,7 +43,13 @@ class Document(models.Model):
     mots_cles = ArrayField(models.CharField(max_length=100), default=list, blank=True)
     directeur = models.CharField(max_length=200, blank=True)
     pages     = models.PositiveSmallIntegerField(null=True, blank=True)
-    fichier   = models.FileField(upload_to="documents/", null=True, blank=True)
+    # Extension vérifiée aussi côté serializer (DocumentSoumissionSerializer,
+    # qui contrôle en plus les octets magiques "%PDF-") — le validator ici
+    # protège les autres points d'entrée (admin Django, scripts, etc.).
+    fichier   = models.FileField(
+        upload_to="documents/", null=True, blank=True,
+        validators=[FileExtensionValidator(["pdf"])],
+    )
     # Texte extrait du PDF (pdfplumber, premieres pages) - jamais expose via
     # l'API, sert uniquement a indexer le contenu reel dans Meilisearch : la
     # recherche ne doit pas dependre uniquement du titre/resume/mots-cles

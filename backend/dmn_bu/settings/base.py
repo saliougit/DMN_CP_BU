@@ -118,6 +118,16 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # ScopedRateThrottle ne limite que les vues qui déclarent `throttle_scope`
+    # (login, inscription, reset mdp) — aucun effet sur le reste de l'API.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+        "register": "5/min",
+        "password_reset": "5/min",
+    },
 }
 
 # ─── Redis / Cache ────────────────────────────────────────────────────────────
@@ -189,3 +199,6 @@ MINIO_PUBLIC_ENDPOINT = config("MINIO_PUBLIC_ENDPOINT", default="localhost/minio
 MINIO_ACCESS_KEY      = config("MINIO_ROOT_USER",       default="minioadmin")
 MINIO_SECRET_KEY      = config("MINIO_ROOT_PASSWORD",   default="minioadmin")
 MINIO_BUCKET          = config("MINIO_BUCKET",          default="dmn-documents")
+# Schéma utilisé pour reconstruire l'URL publique signée (voir
+# apps/documents/storage_utils.py) — surchargé en "http:" en développement.
+MINIO_URL_PROTOCOL    = "https:"

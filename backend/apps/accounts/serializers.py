@@ -11,12 +11,15 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id", "username", "email", "first_name", "last_name",
-            "role", "telephone",
+            "role", "telephone", "is_superuser", "types_valides",
             "faculte", "filiere", "niveau",
             "faculte_nom", "filiere_nom", "niveau_nom",
             "date_adhesion", "photo", "date_joined",
         ]
-        read_only_fields = ["id", "role", "date_joined"]
+        # role et types_valides ne se changent que par les endpoints dédiés
+        # (AdminSetRoleView / AdminSetValidationPermissionsView) — jamais via
+        # un PATCH générique, pour garder une seule porte d'entrée contrôlée.
+        read_only_fields = ["id", "role", "is_superuser", "types_valides", "date_joined"]
         # Meme raison que RegisterSerializer : eviter le message generique
         # DRF sur le champ email unique.
         extra_kwargs = {"email": {"validators": []}}

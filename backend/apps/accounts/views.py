@@ -7,8 +7,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-from .models import User
+from .models import User, RoleChoices
 from .serializers import UserSerializer, RegisterSerializer
+
+# Doit rester synchronisé avec TypeDocument (apps/documents/models.py) — pas
+# d'import direct entre apps pour éviter tout couplage models<->models.
+TYPES_DOCUMENT_VALIDABLES = {
+    "memoire_licence", "memoire_master", "these_doctorat", "article", "rapport",
+}
 
 _token_generator = PasswordResetTokenGenerator()
 
@@ -73,6 +79,14 @@ class MembresListView(generics.ListCreateAPIView):
                 user.niveau = NiveauModel.objects.get(nom=niveau_nom)
             except Exception:
                 pass
+
+        # Habilitations de validation par type de document : uniquement
+        # attribuables par un super admin, y compris à la création.
+        if role == RoleChoices.ADMIN and request.user.is_superuser:
+            types = data.get("types_valides", [])
+            if isinstance(types, list) and all(t in TYPES_DOCUMENT_VALIDABLES for t in types):
+                user.types_valides = types
+
         user.set_password(password)
         user.save()
 
@@ -187,7 +201,7 @@ class AdminSetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        if membre.role == "admin" and membre.id != request.user.id:
+        if membre.role == "admin" and membre.id != request.user.id and not request.user.is_superuser:
             return Response({"detail": "Impossible de modifier le mot de passe d'un autre administrateur."}, status=status.HTTP_403_FORBIDDEN)
 
         new_password = request.data.get("password", "")
@@ -207,6 +221,70 @@ class AdminSetPasswordView(APIView):
                 pass
 
         return Response({"detail": "Mot de passe mis à jour."})
+
+
+class AdminSetRoleView(APIView):
+    """Admin change le rôle (membre <-> admin) d'un utilisateur. Promouvoir
+    un membre en admin reste ouvert à tout admin ; rétrograder un admin en
+    membre est réservé au super admin."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.role != "admin":
+            return Response({"detail": "Interdit."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            membre = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        nouveau_role = request.data.get("role")
+        if nouveau_role not in (RoleChoices.ADMIN, RoleChoices.MEMBRE):
+            return Response({"role": "Rôle invalide."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if (
+            membre.role == RoleChoices.ADMIN
+            and nouveau_role == RoleChoices.MEMBRE
+            and not request.user.is_superuser
+        ):
+            return Response(
+                {"detail": "Seul le super admin peut rétrograder un administrateur."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        membre.role = nouveau_role
+        # Un membre redescendu de admin perd ses habilitations de validation —
+        # elles seront à réattribuer explicitement s'il est repromu plus tard.
+        if nouveau_role == RoleChoices.MEMBRE:
+            membre.types_valides = []
+        membre.save(update_fields=["role", "types_valides"])
+        return Response(UserSerializer(membre).data)
+
+
+class AdminSetValidationPermissionsView(APIView):
+    """Super admin uniquement : attribue/révoque les types de documents
+    qu'un admin a le droit d'approuver/rejeter (voir ROADMAP.md, item 5)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, user_id):
+        if not request.user.is_superuser:
+            return Response({"detail": "Réservé au super admin."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            membre = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if membre.role != RoleChoices.ADMIN:
+            return Response({"detail": "Ce réglage ne s'applique qu'aux administrateurs."}, status=status.HTTP_400_BAD_REQUEST)
+
+        types = request.data.get("types_valides", [])
+        if not isinstance(types, list) or not all(t in TYPES_DOCUMENT_VALIDABLES for t in types):
+            return Response({"types_valides": "Valeurs invalides."}, status=status.HTTP_400_BAD_REQUEST)
+
+        membre.types_valides = types
+        membre.save(update_fields=["types_valides"])
+        return Response(UserSerializer(membre).data)
 
 
 class LogoutView(generics.GenericAPIView):

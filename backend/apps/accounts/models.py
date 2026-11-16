@@ -1,5 +1,6 @@
 import uuid
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
@@ -15,6 +16,15 @@ class User(AbstractUser):
     # qu'un doublon existe.
     email = models.EmailField("email address", unique=True, blank=True)
     role  = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.MEMBRE)
+    # Types de documents que cet admin peut approuver/rejeter (vide =
+    # consultation uniquement, aucun droit de validation). Ignoré si
+    # is_superuser=True (le super admin valide tout, sans restriction).
+    # Gérable uniquement par un super admin — voir AdminSetValidationPermissionsView.
+    types_valides = ArrayField(
+        models.CharField(max_length=20),
+        default=list, blank=True,
+        help_text="Types de documents que cet admin peut approuver/rejeter (vide = consultation uniquement). Sans effet si super admin.",
+    )
 
     telephone     = models.CharField(max_length=20, blank=True)
     photo         = models.ImageField(upload_to="photos/", null=True, blank=True)

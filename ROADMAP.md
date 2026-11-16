@@ -13,28 +13,37 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 - [ ] Remplacer les éléments bruts/mal stylés par des composants propres et cohérents (Base UI déjà en place dans le projet, ou shadcn) — à traiter progressivement, écran par écran.
 - [ ] Exemple cité : le panneau qui s'ouvre au clic sur "Profil" (infos un peu collées, pas assez d'air/de structure).
 
-## 3. Gestion des rôles (membre ↔ admin)
+## 3. Gestion des rôles (membre ↔ admin) — ✅ fait (2026-11-16)
 
-- [ ] Depuis l'interface admin : pouvoir changer le rôle d'un membre → admin, et inversement.
-- [ ] **Règle** : un admin "normal" peut promouvoir un membre en admin, mais **ne peut pas** :
+- [x] Depuis l'interface admin : pouvoir changer le rôle d'un membre → admin, et inversement.
+- [x] **Règle** : un admin "normal" peut promouvoir un membre en admin, mais **ne peut pas** :
   - changer le rôle d'un autre admin (admin → membre),
   - changer le mot de passe d'un autre admin.
-  Seul le **super admin** peut faire ces deux actions (le contrôle mot de passe existe déjà côté API — `AdminSetPasswordView` — à répliquer pour le changement de rôle).
+  Seul le **super admin** peut faire ces deux actions.
+
+**Implémentation** : `POST /api/membres/<id>/set-role/` (`AdminSetRoleView`, `backend/apps/accounts/views.py`) — promotion `membre→admin` ouverte à tout admin, rétrogradation `admin→membre` réservée à `request.user.is_superuser`. `AdminSetPasswordView` corrigée avec la même exception super admin (elle bloquait le changement de mot de passe d'un autre admin sans distinction auparavant). UI dans `frontend/src/app/gestion/membres/page.tsx` (boutons promouvoir/rétrograder dans la liste et le panneau détail).
 
 ## 4. Config : masquer "Publier/Approuver" sur les documents déjà rejetés
 
 - [ ] Ajouter un paramètre (visible et modifiable depuis le Django admin) qui contrôle l'affichage des boutons "Publier"/"Approuver" sur un document déjà rejeté.
 - [ ] **Par défaut : caché** (les boutons ne s'affichent pas sur un document rejeté, sauf si l'admin active explicitement le paramètre).
 
-## 5. Sous-rôles admin par type de document (validation ciblée)
+## 5. Sous-rôles admin par type de document (validation ciblée) — ✅ fait (2026-11-16)
 
-- [ ] Tous les admins voient toutes les soumissions, mais seuls ceux habilités peuvent les **valider** (approuver/rejeter) :
+- [x] Tous les admins voient toutes les soumissions, mais seuls ceux habilités peuvent les **valider** (approuver/rejeter) :
   - habilitation par type de document (thèse, mémoire master, mémoire licence, article, rapport...) ;
   - un admin sans l'habilitation sur un type voit le document mais pas le(s) bouton(s) d'action pour ce type ;
   - un admin peut cumuler plusieurs habilitations (ex : thèses + mémoires master) ;
   - le **super admin** n'a aucune restriction (peut tout valider, quel que soit le type).
-- [ ] Gestion des habilitations : uniquement par le **super admin**, depuis l'API, au moment de la création ou de la modification d'un membre/admin (attribuer/révoquer).
-- [ ] Les autres admins gardent leurs capacités actuelles sans restriction (créer un membre, le promouvoir en admin) — seule la gestion fine des habilitations de validation et la rétrogradation admin→membre sont réservées au super admin.
+- [x] Gestion des habilitations : uniquement par le **super admin**, depuis l'API, au moment de la création ou de la modification d'un membre/admin (attribuer/révoquer).
+- [x] Les autres admins gardent leurs capacités actuelles sans restriction (créer un membre, le promouvoir en admin) — seule la gestion fine des habilitations de validation et la rétrogradation admin→membre sont réservées au super admin.
+
+**Implémentation** :
+- `User.types_valides` (ArrayField de strings, `backend/apps/accounts/models.py`) — migration `0005_user_types_valides`.
+- `PeutValiderDocument` (`backend/apps/documents/views.py`) : permission objet sur les actions `approuver`/`rejeter` — super admin toujours OK, admin normal seulement si `doc.type in user.types_valides`. Câblée via `get_permissions()` (⚠️ le `@action(permission_classes=...)` seul ne suffit pas ici, cette vue override `get_permissions()`).
+- `POST /api/membres/<id>/set-permissions/` (`AdminSetValidationPermissionsView`) — réservé à `is_superuser`, aussi utilisable à la création via `POST /api/membres/` (champ `types_valides`, ignoré si le créateur n'est pas super admin).
+- Frontend : boutons Approuver/Rejeter masqués côté `gestion/soumissions/page.tsx` et `submission-detail-drawer.tsx` via `peutValiderType(user, doc.type)` (`frontend/src/lib/api.ts`) — au passage, le drawer affichait ces boutons même sur un document déjà approuvé/rejeté (bug latent lié à l'item 4), corrigé en même temps en les limitant à `statut === "en_attente"`.
+- "Super admin" = champ Django natif `User.is_superuser` (pas de nouveau champ ajouté) — à activer via Django admin ou `createsuperuser`, jamais via l'API publique.
 
 ---
 

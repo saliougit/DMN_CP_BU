@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, Fragment } from "react"
 import {
   Search, Users, Mail, GraduationCap, BookOpen, Calendar,
   RefreshCw, Plus, Loader2, Shield, UserRound, Lock, Eye, EyeOff, Bell, BellOff,
-  ChevronDown, ChevronUp, Info,
+  ChevronDown, ChevronUp, Info, Crown, ArrowUpCircle, ArrowDownCircle, CheckSquare,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/select"
 import { usePagination } from "@/components/ui/pagination"
 import { api } from "@/lib/api"
-import type { User, Faculte, Niveau } from "@/types"
+import { useAuth } from "@/contexts/auth-context"
+import type { User, Faculte, Niveau, DocumentType } from "@/types"
+import { TYPE_LABELS } from "@/lib/document-types"
 import { toast } from "sonner"
 
 function getInitials(nom: string, prenom: string): string {
@@ -40,6 +42,7 @@ function formatDate(iso: string | undefined): string {
 }
 
 export default function AdminMembresPage() {
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [facultes, setFacultes] = useState<Faculte[]>([])
   const [niveaux, setNiveaux] = useState<Niveau[]>([])
@@ -50,7 +53,7 @@ export default function AdminMembresPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({
     prenom: "", nom: "", email: "", password: "", role: "membre" as "admin" | "membre",
-    faculte: "", filiere: "", niveau: "",
+    faculte: "", filiere: "", niveau: "", typesValides: [] as DocumentType[],
   })
   const [showCreatePwd, setShowCreatePwd] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -62,6 +65,11 @@ export default function AdminMembresPage() {
   const [showSetPwdValue, setShowSetPwdValue] = useState(false)
   const [savingPwd, setSavingPwd] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // Rôle + habilitations de validation
+  const [changingRole, setChangingRole] = useState(false)
+  const [permsForm, setPermsForm] = useState<DocumentType[]>([])
+  const [savingPerms, setSavingPerms] = useState(false)
 
   function generatePassword(): string {
     const upper  = "ABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -134,11 +142,12 @@ export default function AdminMembresPage() {
         faculte: createForm.faculte || undefined,
         filiere: createForm.filiere || undefined,
         niveau: createForm.niveau || undefined,
+        types_valides: createForm.role === "admin" ? createForm.typesValides : undefined,
       })
       toast.success(`Compte créé pour ${created.email} — email de bienvenue envoyé`)
       setUsers((prev) => [created, ...prev])
       setCreateOpen(false)
-      setCreateForm({ prenom: "", nom: "", email: "", password: "", role: "membre", faculte: "", filiere: "", niveau: "" })
+      setCreateForm({ prenom: "", nom: "", email: "", password: "", role: "membre", faculte: "", filiere: "", niveau: "", typesValides: [] })
     } catch (err: any) {
       toast.error(err?.message ?? "Erreur lors de la création")
     } finally {
@@ -163,6 +172,39 @@ export default function AdminMembresPage() {
       toast.error(err?.message ?? "Erreur lors de la mise à jour")
     } finally {
       setSavingPwd(false)
+    }
+  }
+
+  async function handleChangeRole(target: User, nouveauRole: "admin" | "membre") {
+    setChangingRole(true)
+    try {
+      const updated = await api.adminSetRole(target.id, nouveauRole)
+      toast.success(nouveauRole === "admin" ? `${updated.prenom} ${updated.nom} promu administrateur` : `${updated.prenom} ${updated.nom} rétrogradé membre`)
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      setDetailUser((d) => (d && d.id === updated.id ? updated : d))
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erreur lors du changement de rôle")
+    } finally {
+      setChangingRole(false)
+    }
+  }
+
+  function toggleType(type: DocumentType) {
+    setPermsForm((prev) => prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type])
+  }
+
+  async function handleSavePermissions() {
+    if (!detailUser) return
+    setSavingPerms(true)
+    try {
+      const updated = await api.adminSetValidationPermissions(detailUser.id, permsForm)
+      toast.success("Habilitations mises à jour")
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      setDetailUser(updated)
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erreur lors de la mise à jour des habilitations")
+    } finally {
+      setSavingPerms(false)
     }
   }
 
@@ -252,8 +294,9 @@ export default function AdminMembresPage() {
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{user.faculte ?? "—"}</TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{user.niveau ?? "—"}</TableCell>
                       <TableCell>
-                        <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px]">
-                          {user.role === "admin" ? "Admin" : "Membre"}
+                        <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px] gap-1">
+                          {user.isSuperAdmin && <Crown className="h-3 w-3" />}
+                          {user.isSuperAdmin ? "Super admin" : user.role === "admin" ? "Admin" : "Membre"}
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
@@ -277,13 +320,25 @@ export default function AdminMembresPage() {
                         <TableCell colSpan={7} className="p-0 bg-muted/10">
                           <div className="flex flex-wrap items-center gap-2 px-4 py-3">
                             <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                              onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
+                              onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
                               <Info className="h-3.5 w-3.5" /> Détails
                             </Button>
-                            {user.role !== "admin" && (
+                            {(user.role !== "admin" || currentUser?.isSuperAdmin) && (
                               <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                                onClick={() => { setDetailUser(user); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(true); setShowSetPwdValue(false) }}>
+                                onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(true); setShowSetPwdValue(false) }}>
                                 <Lock className="h-3.5 w-3.5" /> Changer le mot de passe
+                              </Button>
+                            )}
+                            {user.role === "membre" && (
+                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                                onClick={() => handleChangeRole(user, "admin")} disabled={changingRole}>
+                                <ArrowUpCircle className="h-3.5 w-3.5" /> Promouvoir admin
+                              </Button>
+                            )}
+                            {user.role === "admin" && !user.isSuperAdmin && currentUser?.isSuperAdmin && (
+                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                                onClick={() => handleChangeRole(user, "membre")} disabled={changingRole}>
+                                <ArrowDownCircle className="h-3.5 w-3.5" /> Rétrograder membre
                               </Button>
                             )}
                           </div>
@@ -323,8 +378,9 @@ export default function AdminMembresPage() {
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <p className="text-muted-foreground">Rôle</p>
-                    <Badge variant={detailUser.role === "admin" ? "default" : "secondary"} className="text-[10px] mt-1">
-                      {detailUser.role === "admin" ? "Admin" : "Membre"}
+                    <Badge variant={detailUser.role === "admin" ? "default" : "secondary"} className="text-[10px] mt-1 gap-1">
+                      {detailUser.isSuperAdmin && <Crown className="h-3 w-3" />}
+                      {detailUser.isSuperAdmin ? "Super admin" : detailUser.role === "admin" ? "Admin" : "Membre"}
                     </Badge>
                   </div>
                   <div>
@@ -360,13 +416,13 @@ export default function AdminMembresPage() {
                       <Lock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-semibold">Changer le mot de passe</span>
                     </div>
-                    {!showSetPwdPanel && detailUser.role !== "admin" && (
+                    {!showSetPwdPanel && (detailUser.role !== "admin" || currentUser?.isSuperAdmin) && (
                       <Button variant="outline" size="sm" className="text-xs h-7"
                         onClick={() => setShowSetPwdPanel(true)}>
                         Modifier
                       </Button>
                     )}
-                    {detailUser.role === "admin" && (
+                    {detailUser.role === "admin" && !currentUser?.isSuperAdmin && (
                       <span className="text-[10px] text-muted-foreground italic">Non modifiable</span>
                     )}
                   </div>
@@ -423,6 +479,65 @@ export default function AdminMembresPage() {
                     </div>
                   )}
                 </div>
+
+                <Separator />
+
+                {/* Changement de rôle */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Rôle</span>
+                  </div>
+                  {detailUser.role === "membre" && (
+                    <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5 w-full"
+                      onClick={() => handleChangeRole(detailUser, "admin")} disabled={changingRole}>
+                      <ArrowUpCircle className="h-3.5 w-3.5" /> Promouvoir administrateur
+                    </Button>
+                  )}
+                  {detailUser.role === "admin" && !detailUser.isSuperAdmin && currentUser?.isSuperAdmin && (
+                    <Button variant="outline" size="sm" className="text-xs h-8 gap-1.5 w-full text-destructive border-destructive/30 hover:bg-destructive/5"
+                      onClick={() => handleChangeRole(detailUser, "membre")} disabled={changingRole}>
+                      <ArrowDownCircle className="h-3.5 w-3.5" /> Rétrograder membre
+                    </Button>
+                  )}
+                  {detailUser.role === "admin" && !detailUser.isSuperAdmin && !currentUser?.isSuperAdmin && (
+                    <p className="text-[10px] text-muted-foreground italic">Seul le super admin peut rétrograder un administrateur.</p>
+                  )}
+                  {detailUser.isSuperAdmin && (
+                    <p className="text-[10px] text-muted-foreground italic">Super admin — rôle non modifiable ici.</p>
+                  )}
+                </div>
+
+                {/* Habilitations de validation par type de document — super admin uniquement */}
+                {detailUser.role === "admin" && !detailUser.isSuperAdmin && currentUser?.isSuperAdmin && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-semibold">Habilitations de validation</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Types de documents que cet admin peut approuver/rejeter. Sans habilitation, il consulte les soumissions mais ne peut pas les valider.
+                      </p>
+                      <div className="space-y-2">
+                        {Object.entries(TYPE_LABELS).map(([value, label]) => (
+                          <label key={value} className="flex items-center gap-2.5 text-sm cursor-pointer">
+                            <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary"
+                              checked={permsForm.includes(value as DocumentType)}
+                              onChange={() => toggleType(value as DocumentType)} />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                      <Button size="sm" className="text-xs h-8 gap-1.5 bg-primary hover:bg-primary/90 w-full"
+                        onClick={handleSavePermissions} disabled={savingPerms}>
+                        {savingPerms ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Enregistrement…</>
+                          : <><CheckSquare className="h-3.5 w-3.5" /> Enregistrer les habilitations</>}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -517,6 +632,27 @@ export default function AdminMembresPage() {
                   </Select>
                 </div>
               </div>
+              {createForm.role === "admin" && currentUser?.isSuperAdmin && (
+                <div className="space-y-2 rounded-lg border border-border/60 p-3 bg-muted/20">
+                  <Label className="text-xs">Habilitations de validation (facultatif)</Label>
+                  <p className="text-[10px] text-muted-foreground">Types de documents qu'il pourra approuver/rejeter — vide = consultation uniquement.</p>
+                  <div className="space-y-1.5 pt-1">
+                    {Object.entries(TYPE_LABELS).map(([value, label]) => (
+                      <label key={value} className="flex items-center gap-2.5 text-sm cursor-pointer">
+                        <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary"
+                          checked={createForm.typesValides.includes(value as DocumentType)}
+                          onChange={() => setCreateForm((f) => ({
+                            ...f,
+                            typesValides: f.typesValides.includes(value as DocumentType)
+                              ? f.typesValides.filter((t) => t !== value)
+                              : [...f.typesValides, value as DocumentType],
+                          }))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="text-[10px] text-muted-foreground bg-muted/40 rounded p-2 border border-border/40">
                 Un email de bienvenue avec les identifiants sera automatiquement envoyé{createForm.role === "admin" ? " à l'administrateur" : " au membre"}.
               </p>

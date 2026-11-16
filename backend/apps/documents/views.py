@@ -18,6 +18,19 @@ class IsAdminRole(permissions.BasePermission):
         return request.user.is_authenticated and request.user.role == "admin"
 
 
+class PeutValiderDocument(permissions.BasePermission):
+    """Admin + habilité à valider ce type de document (ou super admin, qui
+    valide tout sans restriction) — voir User.types_valides et ROADMAP.md."""
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == "admin"
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+        return obj.type in (request.user.types_valides or [])
+
+
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.select_related("faculte", "filiere", "niveau", "soumis_par")
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -38,6 +51,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         if self.action == "create":
             return [permissions.IsAuthenticated()]
+        if self.action in ("approuver", "rejeter"):
+            return [PeutValiderDocument()]
         return [IsAdminRole()]
 
     def get_queryset(self):
@@ -97,7 +112,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # l'upload S3/MinIO, déjà synchrone et suffisant.
         serializer.save(soumis_par=user, statut=statut)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAdminRole])
+    # Permission réelle : get_permissions() ci-dessus (PeutValiderDocument) —
+    # cet override de get_permissions prévaut sur le kwarg du décorateur.
+    @action(detail=True, methods=["post"])
     def approuver(self, request, pk=None):
         doc = self.get_object()
         doc.statut = StatutDocument.APPROUVE
@@ -107,7 +124,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         doc.save(update_fields=["statut", "approuve_par", "date_approbation", "raison_rejet"])
         return Response({"statut": "approuve"})
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAdminRole])
+    @action(detail=True, methods=["post"])
     def rejeter(self, request, pk=None):
         doc = self.get_object()
         doc.statut = StatutDocument.REJETE

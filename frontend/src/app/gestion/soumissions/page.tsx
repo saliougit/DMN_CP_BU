@@ -18,7 +18,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { SubmissionDetailDrawer } from "@/components/admin/submission-detail-drawer"
 import type { PickedNode } from "@/components/admin/submission-detail-drawer"
-import { api } from "@/lib/api"
+import { api, peutValiderType } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 import type { Document } from "@/types"
 import { TYPE_LABELS, TYPE_COLORS } from "@/lib/document-types"
 import { formatDate } from "@/lib/utils"
@@ -41,6 +42,7 @@ const STATUS_STYLE: Record<string, { icon: React.ElementType; label: string; bad
 }
 
 export default function SoumissionsPage() {
+  const { user } = useAuth()
   const [allDocs, setAllDocs] = useState<Document[]>([])
   const [tab, setTab] = useState<TabKey>("en_attente")
   const [recherche, setRecherche] = useState("")
@@ -224,7 +226,7 @@ export default function SoumissionsPage() {
                             <Button variant="outline" size="sm" onClick={() => setDetailDoc(doc)} className="gap-1.5 h-8 text-xs">
                               <Eye className="h-3.5 w-3.5" /> Détails
                             </Button>
-                            {doc.statut === "en_attente" && (
+                            {doc.statut === "en_attente" && peutValiderType(user, doc.type) && (
                               <>
                                 <Button variant="outline" size="sm" onClick={() => setRejeteDoc(doc)}
                                   className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60">

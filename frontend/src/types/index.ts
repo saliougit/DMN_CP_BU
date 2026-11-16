@@ -6,6 +6,8 @@ export interface User {
   prenom: string
   email: string
   role: UserRole
+  isSuperAdmin: boolean
+  typesValides: DocumentType[]
   niveau?: string
   faculte?: string
   filiere?: string

@@ -12,6 +12,16 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = BaseUserAdmin.fieldsets + (
         ("DMN-BN", {"fields": ("role", "telephone", "photo", "bio", "faculte", "filiere", "date_adhesion")}),
+        ("Habilitations de validation (admins)", {
+            "fields": ("types_valides",),
+            "description": (
+                "Types de documents que cet admin peut approuver/rejeter "
+                "(valeurs : memoire_licence, memoire_master, these_doctorat, "
+                "article, rapport). Vide = consultation uniquement. Sans "
+                "effet si le compte est super admin (voir case \"Statut "
+                "super utilisateur\" ci-dessus) : un super admin valide tout."
+            ),
+        }),
         ("Notifications (admins)", {
             "fields": ("notify_soumission", "notify_compte", "notify_approbation", "notify_rejet"),
             "description": "Ces préférences ne s'appliquent qu'aux comptes Administrateur.",

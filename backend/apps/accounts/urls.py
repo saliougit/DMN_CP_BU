@@ -13,4 +13,6 @@ urlpatterns = [
     path("auth/change-password/",         views.ChangePasswordView.as_view(),      name="change_password"),
     path("membres/",                      views.MembresListView.as_view(),         name="membres"),
     path("membres/<uuid:user_id>/set-password/", views.AdminSetPasswordView.as_view(), name="admin_set_password"),
+    path("membres/<uuid:user_id>/set-role/",     views.AdminSetRoleView.as_view(),     name="admin_set_role"),
+    path("membres/<uuid:user_id>/set-permissions/", views.AdminSetValidationPermissionsView.as_view(), name="admin_set_permissions"),
 ]

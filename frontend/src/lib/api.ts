@@ -1,4 +1,4 @@
-import type { Document, SearchFilters, SearchResult, DashboardStats, Faculte, Niveau, User } from "@/types"
+import type { Document, SearchFilters, SearchResult, DashboardStats, Faculte, Niveau, User, DocumentType } from "@/types"
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api").replace(/\/$/, "")
 
@@ -142,6 +142,8 @@ function mapUser(d: Record<string, unknown>): User {
     prenom:    (d.first_name as string) ?? "",
     email:     d.email as string,
     role:      d.role as User["role"],
+    isSuperAdmin: (d.is_superuser as boolean) ?? false,
+    typesValides: (d.types_valides as User["typesValides"]) ?? [],
     faculte:   (d.faculte_nom as string) || undefined,
     filiere:   (d.filiere_nom as string) || undefined,
     niveau:    (d.niveau_nom  as string) || undefined,
@@ -267,10 +269,12 @@ export const api = {
         return (list as Record<string, unknown>[]).map(mapUser)
       }),
 
-  // Admin — créer un membre/admin
+  // Admin — créer un membre/admin (types_valides : pris en compte uniquement
+  // si le créateur est super admin et role="admin", ignoré sinon côté backend)
   createMember: (data: {
     email: string; password: string; role: "membre" | "admin"
     prenom?: string; nom?: string; faculte?: string; filiere?: string; niveau?: string
+    types_valides?: DocumentType[]
   }): Promise<User> =>
     fetchApi<Record<string, unknown>>("/membres/", {
       method: "POST",
@@ -318,4 +322,24 @@ export const api = {
   // Admin — changer le mot de passe d'un membre
   adminSetPassword: (userId: string, password: string, notify = true): Promise<{ detail: string }> =>
     fetchApi(`/membres/${userId}/set-password/`, { method: "POST", body: JSON.stringify({ password, notify }) }, true),
+
+  // Admin — changer le rôle d'un membre (promotion ouverte à tout admin,
+  // rétrogradation d'un admin réservée au super admin — voir backend)
+  adminSetRole: (userId: string, role: "membre" | "admin"): Promise<User> =>
+    fetchApi<Record<string, unknown>>(`/membres/${userId}/set-role/`, { method: "POST", body: JSON.stringify({ role }) }, true)
+      .then(mapUser),
+
+  // Super admin — attribuer/révoquer les types de documents qu'un admin peut valider
+  adminSetValidationPermissions: (userId: string, typesValides: DocumentType[]): Promise<User> =>
+    fetchApi<Record<string, unknown>>(`/membres/${userId}/set-permissions/`, {
+      method: "POST",
+      body: JSON.stringify({ types_valides: typesValides }),
+    }, true).then(mapUser),
+}
+
+/** Un admin peut approuver/rejeter un document de ce type ? (super admin : toujours oui) */
+export function peutValiderType(user: User | null | undefined, type: DocumentType): boolean {
+  if (!user || user.role !== "admin") return false
+  if (user.isSuperAdmin) return true
+  return user.typesValides.includes(type)
 }

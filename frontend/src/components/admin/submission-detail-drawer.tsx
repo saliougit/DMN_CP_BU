@@ -19,7 +19,8 @@ const PdfViewer = dynamic(
   () => import("@/components/documents/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
   { ssr: false }
 )
-import { api } from "@/lib/api"
+import { api, peutValiderType } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 import type { Faculte } from "@/types"
 import { cn } from "@/lib/utils"
 import type { Document } from "@/types"
@@ -166,6 +167,7 @@ export function SubmissionDetailDrawer({
   onApprouver,
   onRejeter,
 }: SubmissionDetailDrawerProps) {
+  const { user } = useAuth()
   const [editMode, setEditMode] = useState(false)
   const [classifMode, setClassifMode] = useState<"confirmer" | "choisir">("confirmer")
   const [pdfPage, setPdfPage] = useState(1)
@@ -242,21 +244,25 @@ export function SubmissionDetailDrawer({
                 <Pencil className="h-3.5 w-3.5" /> Modifier
               </Button>
               <div className="flex-1" />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { onRejeter(doc); onClose() }}
-                className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5"
-              >
-                <XCircle className="h-3.5 w-3.5" /> Rejeter
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApprouver}
-                className="gap-1.5 bg-primary hover:bg-primary/90"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Approuver et publier
-              </Button>
+              {doc.statut === "en_attente" && peutValiderType(user, doc.type) && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { onRejeter(doc); onClose() }}
+                    className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5"
+                  >
+                    <XCircle className="h-3.5 w-3.5" /> Rejeter
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleApprouver}
+                    className="gap-1.5 bg-primary hover:bg-primary/90"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Approuver et publier
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>

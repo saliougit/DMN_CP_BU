@@ -12,6 +12,7 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 
 - [ ] Remplacer les éléments bruts/mal stylés par des composants propres et cohérents (Base UI déjà en place dans le projet, ou shadcn) — à traiter progressivement, écran par écran.
 - [ ] Exemple cité : le panneau qui s'ouvre au clic sur "Profil" (infos un peu collées, pas assez d'air/de structure).
+- [ ] **Responsive sur la partie admin (`/gestion/...`)** : à corriger — l'interface admin n'est pas pensée mobile/tablette aujourd'hui (tableaux, sheets, actions).
 
 ## 3. Gestion des rôles (membre ↔ admin) — ✅ fait (2026-11-16)
 

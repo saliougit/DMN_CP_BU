@@ -60,6 +60,11 @@ class Document(models.Model):
         "accounts.User",
         on_delete=models.SET_NULL, null=True, blank=True, related_name="soumissions",
     )
+    # Distingue un document importé par un admin via l'outil d'import en lot
+    # (gestion/documents) d'une soumission personnelle du même utilisateur en
+    # tant que membre — sans ça, "Mes documents" côté membre mélangerait les
+    # deux pour un admin (voir DocumentViewSet.get_queryset, filtre "mes").
+    ajoute_par_admin = models.BooleanField(default=False)
     approuve_par = models.ForeignKey(
         "accounts.User",
         on_delete=models.SET_NULL, null=True, blank=True, related_name="approbations",

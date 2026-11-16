@@ -69,7 +69,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(statut="approuve")
         mes = self.request.query_params.get("mes") == "true"
         if user.is_authenticated and mes:
-            qs = qs.filter(soumis_par=user)
+            # Exclut les imports en lot faits par cet utilisateur en tant
+            # qu'admin (gestion/documents) : "Mes documents" côté membre ne
+            # doit montrer que ses propres soumissions personnelles.
+            qs = qs.filter(soumis_par=user, ajoute_par_admin=False)
         return qs
 
     def list(self, request, *args, **kwargs):
@@ -110,10 +113,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         statut = "approuve" if user.role == "admin" else "en_attente"
+        # "source=admin" n'est envoyé que par l'outil d'import en lot
+        # (gestion/documents) — distingue un import admin d'une soumission
+        # personnelle du même utilisateur (voir Document.ajoute_par_admin).
+        ajoute_par_admin = user.role == "admin" and self.request.data.get("source") == "admin"
         # Le comptage des pages (pdfplumber) se fait en tâche Celery (voir
         # signals.py) pour ne pas bloquer la réponse HTTP le temps de
         # l'upload S3/MinIO, déjà synchrone et suffisant.
-        serializer.save(soumis_par=user, statut=statut)
+        serializer.save(soumis_par=user, statut=statut, ajoute_par_admin=ajoute_par_admin)
 
     # Permission réelle : get_permissions() ci-dessus (PeutValiderDocument) —
     # cet override de get_permissions prévaut sur le kwarg du décorateur.

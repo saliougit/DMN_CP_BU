@@ -4,6 +4,7 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 /**
@@ -49,15 +50,25 @@ export function AppDrawer({
   footer,
   titleExtra,
 }: AppDrawerProps) {
+  // Sur mobile, un panneau latéral n'a pas de sens (pas de place) : on bascule
+  // en vrai bottom sheet (ouvre depuis le bas, coins arrondis, hauteur
+  // plafonnée avec scroll interne) — panneau latéral classique à partir de sm.
+  const isMobile = useIsMobile()
+
   return (
     <Sheet open={open} onOpenChange={(open) => !open && onClose()} disablePointerDismissal>
       <SheetContent
+        side={isMobile ? "bottom" : "right"}
         showCloseButton={false}
         className={cn(
           "flex flex-col gap-0 p-0 h-full w-full",
           SIZE_CLASSES[size],
+          "data-[side=bottom]:top-auto data-[side=bottom]:h-[88vh] data-[side=bottom]:max-h-[88vh] data-[side=bottom]:max-w-none data-[side=bottom]:rounded-t-2xl",
         )}
       >
+        {isMobile && (
+          <div className="mx-auto mt-2 h-1 w-10 flex-shrink-0 rounded-full bg-border" aria-hidden="true" />
+        )}
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4 flex-shrink-0">
           <div className="flex-1 min-w-0">

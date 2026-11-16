@@ -249,6 +249,7 @@ export default function AdminDocumentsPage() {
           if (entry.directeur) fd.append("directeur", entry.directeur)
           if (entry.resume) fd.append("resume", entry.resume)
           fd.append("fichier", entry.file)
+          fd.append("source", "admin")
           const id = entry.id
           await api.uploadDocument(fd, (pct) =>
             setFiles((prev) => prev.map((f) => f.id === id ? { ...f, progress: pct } : f))

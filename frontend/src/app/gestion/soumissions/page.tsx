@@ -125,14 +125,17 @@ export default function SoumissionsPage() {
       </div>
 
       {/* Filtres */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-0.5 border border-border/60">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        {/* Capsule d'onglets : scroll horizontal propre au lieu de déborder
+            de la page sur mobile (4 onglets avec libellé ne tiennent pas
+            sur un petit écran). */}
+        <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-0.5 border border-border/60 overflow-x-auto max-w-full">
           {STATUS_TABS.map((t) => {
             const Icon = STATUS_STYLE[t.key]?.icon ?? FileText
             const active = tab === t.key
             return (
               <button key={t.key} onClick={() => { setTab(t.key); setExpandedId(null) }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all flex-shrink-0 ${
                   active
                     ? "bg-background text-foreground shadow-sm border border-border"
                     : "text-muted-foreground hover:text-foreground"
@@ -147,7 +150,7 @@ export default function SoumissionsPage() {
           })}
         </div>
 
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input value={recherche} onChange={(e) => setRecherche(e.target.value)}
             placeholder="Rechercher par titre ou auteur…" className="pl-9 h-9 rounded-lg text-xs" />

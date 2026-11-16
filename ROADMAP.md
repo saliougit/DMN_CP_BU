@@ -45,6 +45,13 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 
 **Habilitations de validation — UI en chips** (retour 2026-11-16) : les cases à cocher remplacées par des boutons "chip" (pilule, actif = fond primaire) en `flex flex-wrap`, dans la sheet de détail membre et celle de création — plus visuel, montre d'un coup d'œil toutes les habilitations cochées.
 
+**Round 3 (2026-11-16)** :
+- **Séparation des documents "Mes documents" (membre) vs import admin** : un admin est aussi un membre, mais ses imports en lot via `gestion/documents` ne doivent pas polluer sa page personnelle "Mes documents" côté membre. Ajout du champ `Document.ajoute_par_admin` (migration `0007`), posé à `true` uniquement quand l'import vient de l'outil admin (`gestion/documents` envoie `source=admin` dans le FormData). Le filtre `?mes=true` (`DocumentViewSet.get_queryset`) exclut maintenant ces documents.
+- **Photos de profil sur MinIO** : confirmé — le champ `User.photo` n'a pas de storage dédié, il utilise `STORAGES["default"]` (le même backend S3Boto3Storage/MinIO que les documents), donc déjà sur MinIO comme attendu.
+- **Drawers en vrai bottom sheet sur mobile** : `AppDrawer` (composant partagé, utilisé par tous les panneaux détail/édition admin) bascule automatiquement en bottom sheet (`side="bottom"`, coins arrondis en haut, poignée visuelle, hauteur plafonnée à 88vh avec scroll interne) sous 768px via `useIsMobile()`, et reste un panneau latéral classique au-dessus.
+- **Pagination non responsive** : `usePagination`/`PaginationBar` (partagé par les 3 listes admin) affichait un bouton par page sans wrap ni scroll — débordait dès qu'il y avait plus de ~6 pages sur mobile. Numéros de page masqués sous `sm` (remplacés par "page X/Y"), ré-affichés avec wrap à partir de `sm`.
+- **Capsule d'onglets de `soumissions`** (Toutes/En attente/Approuvées/Rejetées) : ne tenait pas sur un petit écran (4 onglets avec libellé + compteur) → `overflow-x-auto` au lieu de déborder de la page.
+
 ## 5. Sous-rôles admin par type de document (validation ciblée) — ✅ fait (2026-11-16)
 
 - [x] Tous les admins voient toutes les soumissions, mais seuls ceux habilités peuvent les **valider** (approuver/rejeter) :

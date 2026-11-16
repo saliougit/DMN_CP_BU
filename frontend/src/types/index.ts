@@ -8,6 +8,7 @@ export interface User {
   role: UserRole
   isSuperAdmin: boolean
   typesValides: DocumentType[]
+  photoUrl?: string
   niveau?: string
   faculte?: string
   filiere?: string

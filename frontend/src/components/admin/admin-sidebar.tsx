@@ -14,7 +14,7 @@ import {
   SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarSeparator,
 } from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
@@ -141,6 +141,7 @@ export function AdminSidebar() {
         <SidebarSeparator />
         <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center">
           <Avatar className="h-8 w-8 flex-shrink-0">
+            {user?.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
           </Avatar>
           <div className="group-data-[collapsible=icon]:hidden flex-1 min-w-0">

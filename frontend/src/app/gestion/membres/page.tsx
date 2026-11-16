@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
@@ -280,6 +280,7 @@ export default function AdminMembresPage() {
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <Avatar className="h-8 w-8 flex-shrink-0">
+                            {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
                             <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
                               {getInitials(user.nom, user.prenom)}
                             </AvatarFallback>
@@ -364,6 +365,7 @@ export default function AdminMembresPage() {
               <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
+                    {detailUser.photoUrl && <AvatarImage src={detailUser.photoUrl} alt="" />}
                     <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                       {getInitials(detailUser.nom, detailUser.prenom)}
                     </AvatarFallback>

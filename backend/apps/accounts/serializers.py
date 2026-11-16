@@ -1,11 +1,18 @@
 from rest_framework import serializers
 from .models import User
 
+# Photo de profil : même logique que les documents (bucket privé — voir
+# apps/documents/storage_utils.py) et même esprit de validation que les PDF
+# (apps/documents/serializers.py) pour éviter un upload non contrôlé.
+PHOTO_EXTENSIONS_AUTORISEES = (".jpg", ".jpeg", ".png", ".webp")
+PHOTO_TAILLE_MAX = 5 * 1024 * 1024  # 5 Mo
+
 
 class UserSerializer(serializers.ModelSerializer):
     faculte_nom = serializers.CharField(source="faculte.nom", allow_null=True, read_only=True)
     filiere_nom = serializers.CharField(source="filiere.nom", allow_null=True, read_only=True)
     niveau_nom  = serializers.CharField(source="niveau.nom",  allow_null=True, read_only=True)
+    photo_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
@@ -14,15 +21,36 @@ class UserSerializer(serializers.ModelSerializer):
             "role", "telephone", "is_superuser", "types_valides",
             "faculte", "filiere", "niveau",
             "faculte_nom", "filiere_nom", "niveau_nom",
-            "date_adhesion", "photo", "date_joined",
+            "date_adhesion", "photo", "photo_url", "date_joined",
         ]
         # role et types_valides ne se changent que par les endpoints dédiés
         # (AdminSetRoleView / AdminSetValidationPermissionsView) — jamais via
         # un PATCH générique, pour garder une seule porte d'entrée contrôlée.
         read_only_fields = ["id", "role", "is_superuser", "types_valides", "date_joined"]
-        # Meme raison que RegisterSerializer : eviter le message generique
-        # DRF sur le champ email unique.
-        extra_kwargs = {"email": {"validators": []}}
+        extra_kwargs = {
+            # Meme raison que RegisterSerializer : eviter le message generique
+            # DRF sur le champ email unique.
+            "email": {"validators": []},
+            # write_only : jamais renvoyé tel quel (bucket privé, voir photo_url
+            # ci-dessous) ; allow_null pour permettre de retirer sa photo.
+            "photo": {"write_only": True, "required": False, "allow_null": True},
+        }
+
+    def get_photo_url(self, obj):
+        if not obj.photo:
+            return None
+        from apps.documents.storage_utils import presigned_file_url
+        return presigned_file_url(obj.photo.name)
+
+    def validate_photo(self, value):
+        if value is None:
+            return value
+        nom = value.name.lower()
+        if not nom.endswith(PHOTO_EXTENSIONS_AUTORISEES):
+            raise serializers.ValidationError("Formats acceptés : JPG, PNG, WEBP.")
+        if value.size > PHOTO_TAILLE_MAX:
+            raise serializers.ValidationError("L'image dépasse la taille maximale autorisée (5 Mo).")
+        return value
 
 
 class RegisterSerializer(serializers.ModelSerializer):

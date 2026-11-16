@@ -144,6 +144,7 @@ function mapUser(d: Record<string, unknown>): User {
     role:      d.role as User["role"],
     isSuperAdmin: (d.is_superuser as boolean) ?? false,
     typesValides: (d.types_valides as User["typesValides"]) ?? [],
+    photoUrl:  (d.photo_url as string) || undefined,
     faculte:   (d.faculte_nom as string) || undefined,
     filiere:   (d.filiere_nom as string) || undefined,
     niveau:    (d.niveau_nom  as string) || undefined,
@@ -298,6 +299,31 @@ export const api = {
   // Profil — mise à jour
   updateProfile: (data: Partial<{ first_name: string; last_name: string; faculte: string; filiere: string; niveau: string; telephone: string }>): Promise<User> =>
     fetchApi<Record<string, unknown>>("/auth/me/", { method: "PATCH", body: JSON.stringify(data) }, true)
+      .then(mapUser),
+
+  // Profil — photo (multipart, pas de JSON.stringify : laisser le navigateur
+  // fixer le Content-Type avec sa boundary, fetchApi() force sinon "application/json")
+  uploadProfilePhoto: async (file: File): Promise<User> => {
+    const formData = new FormData()
+    formData.append("photo", file)
+    const token = tokens.getAccess()
+    const res = await fetch(`${API_URL}/auth/me/`, {
+      method: "PATCH",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      const msg = body.detail
+        ?? (Object.values(body).flat().find((v) => typeof v === "string") as string | undefined)
+        ?? `Erreur ${res.status}`
+      throw new Error(msg)
+    }
+    return mapUser(await res.json())
+  },
+
+  removeProfilePhoto: (): Promise<User> =>
+    fetchApi<Record<string, unknown>>("/auth/me/", { method: "PATCH", body: JSON.stringify({ photo: null }) }, true)
       .then(mapUser),
 
   // Mise à jour document (admin)

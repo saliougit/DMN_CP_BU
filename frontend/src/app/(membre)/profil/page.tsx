@@ -6,7 +6,7 @@ import Link from "next/link"
 import {
   User, Mail, BookOpen, Calendar,
   FileText, LogOut, ArrowLeft, CheckCircle2, Clock, XCircle, Upload, Layers,
-  Lock, Eye, EyeOff, Loader2
+  Lock, Eye, EyeOff, Loader2, Camera, X as XIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { DmnLoader } from "@/components/ui/dmn-loader"
 import { useAuth } from "@/contexts/auth-context"
 import { api } from "@/lib/api"
@@ -35,6 +35,7 @@ export default function ProfilPage() {
 
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [pwdForm, setPwdForm] = useState({ old: "", new: "", confirm: "" })
   const [showPwd, setShowPwd] = useState(false)
   const [savingPwd, setSavingPwd] = useState(false)
@@ -108,6 +109,35 @@ export default function ProfilPage() {
     }
   }
 
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      await api.uploadProfilePhoto(file)
+      toast.success("Photo de profil mise à jour")
+      window.location.reload()
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erreur lors de l'envoi de la photo")
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  async function handleRemovePhoto() {
+    setUploadingPhoto(true)
+    try {
+      await api.removeProfilePhoto()
+      toast.success("Photo de profil supprimée")
+      window.location.reload()
+    } catch (err: any) {
+      toast.error(err?.message ?? "Erreur lors de la suppression")
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
     if (pwdForm.new !== pwdForm.confirm) { toast.error("Les mots de passe ne correspondent pas"); return }
@@ -141,11 +171,40 @@ export default function ProfilPage() {
               <div className="h-20 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary via-primary/80 to-primary/60" />
               <CardContent className="pt-0 px-5 pb-5">
                 <div className="flex flex-col items-center -mt-12 text-center">
-                  <Avatar className="h-24 w-24 border-4 border-card shadow-lg ring-2 ring-primary/20">
-                    <AvatarFallback className="bg-primary text-primary-foreground font-display text-2xl font-bold">
-                      {user.prenom.charAt(0)}{user.nom.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="group relative">
+                    <Avatar className="h-24 w-24 border-4 border-card shadow-lg ring-2 ring-primary/20">
+                      {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
+                      <AvatarFallback className="bg-primary text-primary-foreground font-display text-2xl font-bold">
+                        {user.prenom.charAt(0)}{user.nom.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label
+                      htmlFor="profil-photo-input"
+                      className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 text-transparent transition-colors group-hover:bg-black/40 group-hover:text-white cursor-pointer"
+                      title="Changer la photo"
+                    >
+                      {uploadingPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                    </label>
+                    <input
+                      id="profil-photo-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                      onChange={handlePhotoChange}
+                    />
+                    {user.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        disabled={uploadingPhoto}
+                        title="Supprimer la photo"
+                        className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow ring-2 ring-card hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                   <h2 className="mt-3 font-display text-lg font-bold">{user.prenom} {user.nom}</h2>
                   <Badge className={`mt-1.5 text-[10px] ${user.role === "admin" ? "bg-primary/15 text-primary border-primary/20" : ""}`} variant={user.role === "admin" ? "outline" : "secondary"}>
                     {user.role === "admin" ? "Administrateur" : "Membre"}

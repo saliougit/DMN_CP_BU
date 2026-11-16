@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { BookOpen, LogIn, Upload, User, LogOut, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup,
@@ -65,6 +65,7 @@ export function PublicNavbar() {
               <DropdownMenuTrigger render={<span />} nativeButton={false}>
                 <Button variant="ghost" size="sm" className="gap-2 px-2">
                   <Avatar className="h-7 w-7">
+                    {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
                     <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
                       {initials}
                     </AvatarFallback>
@@ -78,6 +79,7 @@ export function PublicNavbar() {
                   <DropdownMenuLabel className="font-normal p-0">
                     <div className="flex items-center gap-3.5 rounded-lg bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-3.5">
                       <Avatar className="h-12 w-12 flex-shrink-0 ring-2 ring-primary/25">
+                        {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
                         <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                           {initials}
                         </AvatarFallback>

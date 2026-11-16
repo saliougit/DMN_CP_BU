@@ -115,7 +115,7 @@ export default function SoumissionsPage() {
       {/* En-tête */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Évaluation des soumissions</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Évaluation des soumissions</h1>
         </div>
         <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
           onClick={() => { setRefreshing(true); loadDocs(); setTimeout(() => setRefreshing(false), 800) }}

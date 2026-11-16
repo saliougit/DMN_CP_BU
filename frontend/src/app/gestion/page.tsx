@@ -112,7 +112,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* En-tête page */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Tableau de bord</h1>
       </div>
 
       {/* Cartes stats */}

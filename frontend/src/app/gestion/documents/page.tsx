@@ -418,7 +418,7 @@ export default function AdminDocumentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Documents du catalogue</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Documents du catalogue</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"

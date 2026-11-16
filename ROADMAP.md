@@ -13,7 +13,7 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 ## 2. Refonte UI (composants "moches"/non finis)
 
 - [ ] Remplacer les éléments bruts/mal stylés par des composants propres et cohérents (Base UI déjà en place dans le projet, ou shadcn) — à traiter progressivement, écran par écran.
-- [ ] Exemple cité : le panneau qui s'ouvre au clic sur "Profil" (infos un peu collées, pas assez d'air/de structure).
+- [x] Exemple cité : le panneau qui s'ouvre au clic sur "Profil" (infos un peu collées, pas assez d'air/de structure) — ✅ fait (2026-11-16). C'était le menu déroulant du profil dans `public-navbar.tsx` : `DropdownMenuContent` par défaut n'a que `p-1` et les items `py-1` (composant volontairement compact, utilisé ailleurs dans l'app pour des menus simples — pas touché au niveau global). Corrigé uniquement sur cette instance : passé de `w-56` à `w-72`, en-tête (avatar+nom+email) agrandi avec plus de padding/gap, badge de rôle ajouté (Membre/Admin/Super admin), items espacés (`py-2`). Reste à faire au fil de l'eau : repérer d'autres endroits "collés" au cas par cas (pas de liste exhaustive pour l'instant).
 - [x] **Responsive sur la partie admin (`/gestion/...`)** — ✅ fait (2026-11-16) : voir détail ci-dessous.
 
 **Responsive admin — détail de ce qui a été corrigé** :

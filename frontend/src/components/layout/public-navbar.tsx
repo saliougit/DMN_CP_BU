@@ -73,40 +73,43 @@ export function PublicNavbar() {
                   <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-72 p-1.5">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex items-center gap-3 rounded-lg bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-2.5">
-                      <Avatar className="h-10 w-10 ring-2 ring-primary/25">
-                        <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                  <DropdownMenuLabel className="font-normal p-0">
+                    <div className="flex items-center gap-3.5 rounded-lg bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-3.5">
+                      <Avatar className="h-12 w-12 flex-shrink-0 ring-2 ring-primary/25">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">{user.prenom} {user.nom}</p>
-                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-semibold text-foreground leading-tight">{user.prenom} {user.nom}</p>
+                        <p className="truncate text-xs text-muted-foreground leading-tight">{user.email}</p>
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          {user.isSuperAdmin ? "Super admin" : user.role === "admin" ? "Administrateur" : "Membre"}
+                        </span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSoumettre} className="gap-2 text-xs">
-                  <Upload className="h-3.5 w-3.5" /> Déposer un document
+                <DropdownMenuSeparator className="my-1.5" />
+                <DropdownMenuItem onClick={handleSoumettre} className="gap-2.5 text-xs py-2 px-2">
+                  <Upload className="h-4 w-4" /> Déposer un document
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/profil")} className="gap-2 text-xs">
-                  <User className="h-3.5 w-3.5" /> Mon profil
+                <DropdownMenuItem onClick={() => router.push("/profil")} className="gap-2.5 text-xs py-2 px-2">
+                  <User className="h-4 w-4" /> Mon profil
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/profil/mes-documents")} className="gap-2 text-xs">
-                  <BookOpen className="h-3.5 w-3.5" /> Mes documents
+                <DropdownMenuItem onClick={() => router.push("/profil/mes-documents")} className="gap-2.5 text-xs py-2 px-2">
+                  <BookOpen className="h-4 w-4" /> Mes documents
                 </DropdownMenuItem>
                 {isAdmin && (
-                  <DropdownMenuItem onClick={() => router.push("/gestion")} className="gap-2 text-xs">
-                    <BookOpen className="h-3.5 w-3.5" /> Administration
+                  <DropdownMenuItem onClick={() => router.push("/gestion")} className="gap-2.5 text-xs py-2 px-2">
+                    <BookOpen className="h-4 w-4" /> Administration
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="gap-2 text-xs text-destructive">
-                  <LogOut className="h-3.5 w-3.5" /> Déconnexion
+                <DropdownMenuSeparator className="my-1.5" />
+                <DropdownMenuItem onClick={handleLogout} className="gap-2.5 text-xs py-2 px-2 text-destructive">
+                  <LogOut className="h-4 w-4" /> Déconnexion
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

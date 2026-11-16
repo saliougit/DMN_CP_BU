@@ -158,6 +158,8 @@ interface SubmissionDetailDrawerProps {
   onClose: () => void
   onApprouver: (doc: Document, classif: PickedNode) => void
   onRejeter: (doc: Document) => void
+  /** Config globale (Django admin) : afficher Approuver/Rejeter même sur un document déjà rejeté */
+  afficherBoutonsRejetes?: boolean
 }
 
 export function SubmissionDetailDrawer({
@@ -166,6 +168,7 @@ export function SubmissionDetailDrawer({
   onClose,
   onApprouver,
   onRejeter,
+  afficherBoutonsRejetes = false,
 }: SubmissionDetailDrawerProps) {
   const { user } = useAuth()
   const [editMode, setEditMode] = useState(false)
@@ -244,7 +247,7 @@ export function SubmissionDetailDrawer({
                 <Pencil className="h-3.5 w-3.5" /> Modifier
               </Button>
               <div className="flex-1" />
-              {doc.statut === "en_attente" && peutValiderType(user, doc.type) && (
+              {(doc.statut === "en_attente" || (doc.statut === "rejete" && afficherBoutonsRejetes)) && peutValiderType(user, doc.type) && (
                 <>
                   <Button
                     variant="outline"

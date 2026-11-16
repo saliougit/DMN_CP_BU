@@ -4,9 +4,11 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 
 ---
 
-## 1. Navigation admin ↔ membre
+## 1. Navigation admin ↔ membre — ✅ fait (2026-11-16)
 
-- [ ] Un admin est aussi un membre (il peut consulter/soumettre des documents comme tout membre) — faciliter le switch entre les deux interfaces (`/gestion/...` et le reste du site) depuis la nav, sans repasser par une reconnexion.
+- [x] Un admin est aussi un membre (il peut consulter/soumettre des documents comme tout membre) — faciliter le switch entre les deux interfaces (`/gestion/...` et le reste du site) depuis la nav, sans repasser par une reconnexion.
+
+**Implémentation** : le lien "Administration" existait déjà côté site membre (menu du profil, `public-navbar.tsx`). Ajouté le sens inverse : entrée "Espace membre" dans la sidebar admin (`admin-sidebar.tsx`) qui renvoie vers `/`. Même session JWT des deux côtés — aucune reconnexion nécessaire (`AuthGuard` du layout membre n'exige qu'un utilisateur authentifié, pas un rôle précis).
 
 ## 2. Refonte UI (composants "moches"/non finis)
 
@@ -32,10 +34,12 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 
 **Implémentation** : `POST /api/membres/<id>/set-role/` (`AdminSetRoleView`, `backend/apps/accounts/views.py`) — promotion `membre→admin` ouverte à tout admin, rétrogradation `admin→membre` réservée à `request.user.is_superuser`. `AdminSetPasswordView` corrigée avec la même exception super admin (elle bloquait le changement de mot de passe d'un autre admin sans distinction auparavant). UI dans `frontend/src/app/gestion/membres/page.tsx` (boutons promouvoir/rétrograder dans la liste et le panneau détail).
 
-## 4. Config : masquer "Publier/Approuver" sur les documents déjà rejetés
+## 4. Config : masquer "Publier/Approuver" sur les documents déjà rejetés — ✅ fait (2026-11-16)
 
-- [ ] Ajouter un paramètre (visible et modifiable depuis le Django admin) qui contrôle l'affichage des boutons "Publier"/"Approuver" sur un document déjà rejeté.
-- [ ] **Par défaut : caché** (les boutons ne s'affichent pas sur un document rejeté, sauf si l'admin active explicitement le paramètre).
+- [x] Ajouter un paramètre (visible et modifiable depuis le Django admin) qui contrôle l'affichage des boutons "Publier"/"Approuver" sur un document déjà rejeté.
+- [x] **Par défaut : caché** (les boutons ne s'affichent pas sur un document rejeté, sauf si l'admin active explicitement le paramètre).
+
+**Implémentation** : modèle singleton `Configuration` (`backend/apps/documents/models.py`, migration `0006_configuration`) avec le champ `afficher_boutons_documents_rejetes` (défaut `False`), modifiable uniquement depuis `/admin/documents/configuration/` (une seule ligne, non supprimable). Exposé en lecture aux admins via `GET /api/configuration/` (`ConfigurationView`). Frontend : `gestion/soumissions/page.tsx` charge ce réglage au montage et l'applique à la fois dans le tableau et dans `submission-detail-drawer.tsx` (prop `afficherBoutonsRejetes`) — les boutons Approuver/Rejeter restent par défaut invisibles sur un document rejeté, et apparaissent seulement si le super admin active le paramètre.
 
 ## 5. Sous-rôles admin par type de document (validation ciblée) — ✅ fait (2026-11-16)
 

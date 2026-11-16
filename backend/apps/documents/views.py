@@ -6,8 +6,11 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
-from .models import Document, StatutDocument
-from .serializers import DocumentListSerializer, DocumentDetailSerializer, DocumentSoumissionSerializer
+from .models import Document, StatutDocument, Configuration
+from .serializers import (
+    DocumentListSerializer, DocumentDetailSerializer, DocumentSoumissionSerializer,
+    ConfigurationSerializer,
+)
 from .filters import DocumentFilter
 from .storage_utils import presigned_file_url
 from . import search as search_module
@@ -203,3 +206,13 @@ class StatsView(generics.GenericAPIView):
             "topTelecharges": [{"id": str(r["id"]), "titre": r["titre"], "auteur": r["auteur"], "count": r["nb_telechargements"]} for r in top_telecharges],
             "topVus": [{"id": str(r["id"]), "titre": r["titre"], "auteur": r["auteur"], "count": r["nb_consultations"]} for r in top_vus],
         })
+
+
+class ConfigurationView(generics.RetrieveAPIView):
+    """Réglages globaux (voir Configuration.get()) — lecture réservée aux
+    admins, modification uniquement via le Django admin (ROADMAP.md item 4)."""
+    serializer_class = ConfigurationSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_object(self):
+        return Configuration.get()

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Document
+from .models import Document, Configuration
 from .storage_utils import presigned_file_url
 
 # PDF uniquement : le FileField n'a aucune contrainte de type, donc sans ce
@@ -69,3 +69,9 @@ class DocumentSoumissionSerializer(serializers.ModelSerializer):
         if entete != b"%PDF-":
             raise serializers.ValidationError("Le fichier ne semble pas être un PDF valide.")
         return value
+
+
+class ConfigurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Configuration
+        fields = ["afficher_boutons_documents_rejetes"]

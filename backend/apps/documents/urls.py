@@ -9,4 +9,5 @@ urlpatterns = [
     path("", include(router.urls)),
     path("stats/", views.StatsView.as_view(), name="stats"),
     path("public-stats/", views.PublicStatsView.as_view(), name="public-stats"),
+    path("configuration/", views.ConfigurationView.as_view(), name="configuration"),
 ]

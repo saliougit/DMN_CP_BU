@@ -252,6 +252,11 @@ export const api = {
   getStats: (): Promise<DashboardStats> =>
     fetchApi<DashboardStats>("/stats/", {}, true),
 
+  // Admin — config globale (modifiable uniquement via le Django admin)
+  getConfiguration: (): Promise<{ afficherBoutonsDocumentsRejetes: boolean }> =>
+    fetchApi<{ afficher_boutons_documents_rejetes: boolean }>("/configuration/", {}, true)
+      .then((d) => ({ afficherBoutonsDocumentsRejetes: d.afficher_boutons_documents_rejetes })),
+
   // Admin — tous les documents avec filtres optionnels
   getDocumentsAdmin: (filters?: { statut?: string; search?: string }): Promise<Document[]> => {
     const params = new URLSearchParams()

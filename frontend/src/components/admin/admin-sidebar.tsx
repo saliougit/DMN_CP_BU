@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import {
   LayoutDashboard, ClipboardList, FolderTree,
-  BookMarked, Users, LogOut
+  BookMarked, Users, LogOut, ArrowLeftRight
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import {
@@ -117,6 +117,21 @@ export function AdminSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<Link href="/" />} tooltip="Retour à l'espace membre — consulter/soumettre comme tout membre">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  <span>Espace membre</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

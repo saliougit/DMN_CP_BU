@@ -51,12 +51,20 @@ export default function SoumissionsPage() {
   const [motifRejet, setMotifRejet] = useState("")
   const [refreshing, setRefreshing] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [afficherBoutonsRejetes, setAfficherBoutonsRejetes] = useState(false)
 
   function loadDocs() {
     api.getDocumentsAdmin().then(setAllDocs).catch(() => {})
   }
 
-  useEffect(() => { loadDocs() }, [])
+  useEffect(() => {
+    loadDocs()
+    api.getConfiguration().then((c) => setAfficherBoutonsRejetes(c.afficherBoutonsDocumentsRejetes)).catch(() => {})
+  }, [])
+
+  function peutAgir(doc: Document) {
+    return doc.statut === "en_attente" || (doc.statut === "rejete" && afficherBoutonsRejetes)
+  }
 
   const filtrees = useMemo(() => {
     let items = allDocs
@@ -226,7 +234,7 @@ export default function SoumissionsPage() {
                             <Button variant="outline" size="sm" onClick={() => setDetailDoc(doc)} className="gap-1.5 h-8 text-xs">
                               <Eye className="h-3.5 w-3.5" /> Détails
                             </Button>
-                            {doc.statut === "en_attente" && peutValiderType(user, doc.type) && (
+                            {peutAgir(doc) && peutValiderType(user, doc.type) && (
                               <>
                                 <Button variant="outline" size="sm" onClick={() => setRejeteDoc(doc)}
                                   className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60">
@@ -265,6 +273,7 @@ export default function SoumissionsPage() {
         onClose={() => setDetailDoc(null)}
         onApprouver={handleApprouver}
         onRejeter={(doc) => { setDetailDoc(null); setRejeteDoc(doc) }}
+        afficherBoutonsRejetes={afficherBoutonsRejetes}
       />
 
       {/* Modal Rejet */}

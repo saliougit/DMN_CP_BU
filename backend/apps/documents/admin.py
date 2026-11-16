@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Document, StatutDocument
+from .models import Document, StatutDocument, Configuration
 
 
 @admin.register(Document)
@@ -44,3 +44,22 @@ class DocumentAdmin(admin.ModelAdmin):
     def rejeter_selectionnes(self, request, queryset):
         updated = queryset.filter(statut=StatutDocument.EN_ATTENTE).update(statut=StatutDocument.REJETE)
         self.message_user(request, f"{updated} document(s) rejeté(s).")
+
+
+@admin.register(Configuration)
+class ConfigurationAdmin(admin.ModelAdmin):
+    """Singleton — une seule ligne, non supprimable, pas de bouton "Ajouter"
+    une fois la ligne créée (voir Configuration.get() dans models.py)."""
+
+    def has_add_permission(self, request):
+        return not Configuration.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        # Redirige directement vers l'unique ligne — un singleton n'a pas
+        # besoin d'une liste intermédiaire.
+        from django.shortcuts import redirect
+        obj = Configuration.get()
+        return redirect(f"{obj.pk}/change/")

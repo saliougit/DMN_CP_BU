@@ -86,3 +86,36 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.titre} — {self.auteur} ({self.annee})"
+
+
+class Configuration(models.Model):
+    """Réglages globaux modifiables depuis le Django admin — une seule
+    ligne (singleton, toujours pk=1), voir ROADMAP.md item 4."""
+
+    afficher_boutons_documents_rejetes = models.BooleanField(
+        default=False,
+        help_text=(
+            "Afficher les boutons Approuver/Rejeter sur un document déjà "
+            "rejeté (permet à un admin habilité de revenir sur une décision "
+            "sans repasser par une nouvelle soumission). Désactivé par défaut."
+        ),
+    )
+
+    class Meta:
+        verbose_name = "Configuration"
+        verbose_name_plural = "Configuration"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # singleton : jamais supprimable
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configuration du site"

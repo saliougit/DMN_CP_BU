@@ -268,11 +268,12 @@ export function SubmissionDetailDrawer({
         </div>
       }
     >
-      {/* Layout split : info gauche / viewer droit */}
-      <div className="flex flex-1 min-h-0 w-full gap-0 h-full">
+      {/* Layout split : info gauche / viewer droit — empilé verticalement
+          sous lg (un panneau de 400px fixe ne rentre sur aucun mobile) */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full gap-0 h-full">
 
         {/* Panneau gauche — Informations */}
-        <div className="w-[400px] flex-shrink-0 border-r border-border/60 flex flex-col overflow-hidden">
+        <div className="w-full lg:w-[400px] flex-1 lg:flex-shrink-0 min-h-0 lg:min-h-full border-b lg:border-b-0 lg:border-r border-border/60 flex flex-col overflow-hidden">
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-5 space-y-5">
 
@@ -409,7 +410,7 @@ export function SubmissionDetailDrawer({
         </div>
 
         {/* Panneau droit — Viewer PDF */}
-        <div className="flex-1 flex flex-col min-w-0 bg-muted/10">
+        <div className="flex-1 min-h-0 flex flex-col min-w-0 bg-muted/10">
           {/* Zone PDF — pleine hauteur */}
           <div className="flex-1 min-h-0">
             <PdfViewer 

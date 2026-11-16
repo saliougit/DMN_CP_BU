@@ -210,7 +210,7 @@ export default function AdminMembresPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Membres</h1>
         </div>
@@ -227,13 +227,13 @@ export default function AdminMembresPage() {
         </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Total", value: stats.total, icon: Users },
           { label: "Admins", value: stats.admins, icon: Shield },
           { label: "Membres", value: stats.membres, icon: UserRound },
         ].map(({ label, value, icon: Icon }) => (
-          <Card key={label} className="flex-1">
+          <Card key={label}>
             <CardContent className="flex items-center gap-3 p-4">
               <Icon className="h-5 w-5 text-primary" />
               <div>

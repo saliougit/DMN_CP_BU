@@ -143,8 +143,8 @@ export default function AdminDocumentDetailPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-6 w-40" />
-        <div className="flex gap-6">
-          <Skeleton className="w-[360px] h-[400px] rounded-xl flex-shrink-0" />
+        <div className="flex flex-col lg:flex-row gap-6">
+          <Skeleton className="w-full lg:w-[360px] h-[400px] rounded-xl flex-shrink-0" />
           <div className="flex-1"><Skeleton className="h-[600px] w-full rounded-xl" /></div>
         </div>
       </div>
@@ -182,10 +182,10 @@ export default function AdminDocumentDetailPage() {
         Retour
       </button>
 
-      <div className="flex flex-col lg:flex-row gap-6" style={{ minHeight: "calc(100vh - 12rem)" }}>
+      <div className="flex flex-col lg:flex-row gap-6 lg:min-h-[calc(100vh-12rem)]">
         {/* Panneau gauche : Métadonnées */}
         <aside className="lg:w-[360px] flex-shrink-0 order-2 lg:order-1">
-          <div className="sticky top-4 rounded-xl border border-border bg-card flex flex-col" style={{ height: "calc(100vh - 12rem)" }}>
+          <div className="lg:sticky lg:top-4 rounded-xl border border-border bg-card flex flex-col lg:h-[calc(100vh-12rem)]">
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               <div className="flex items-center gap-2">
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${statusInfo.bg}`}>
@@ -275,8 +275,7 @@ export default function AdminDocumentDetailPage() {
 
         {/* Panneau droit : PDF Viewer */}
         <div className="flex-1 min-w-0 order-1 lg:order-2">
-          <div className="sticky top-4 rounded-xl border border-border bg-card overflow-hidden"
-            style={{ height: "calc(100vh - 12rem)" }}>
+          <div className="lg:sticky lg:top-4 rounded-xl border border-border bg-card overflow-hidden h-[70vh] lg:h-[calc(100vh-12rem)]">
             <PdfViewer
               fileUrl={doc.fichierUrl}
               pages={doc.pages}
@@ -298,8 +297,8 @@ export default function AdminDocumentDetailPage() {
           <Separator className="my-4 flex-shrink-0" />
           <ScrollArea className="flex-1 px-6 pb-4">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Titre</Label>
                   <Input value={editForm.titre ?? ""} onChange={(e) => updateForm("titre", e.target.value)}
                     className="h-9 text-sm" />
@@ -372,12 +371,12 @@ export default function AdminDocumentDetailPage() {
                     onChange={(e) => setEditDirecteur((p) => ({ ...p, encadrant: e.target.value }))}
                     className="h-9 text-sm" placeholder="Prof. Nom Prénom" />
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Résumé</Label>
                   <Textarea value={editForm.resume ?? ""} onChange={(e) => updateForm("resume", e.target.value)}
                     className="text-sm resize-none" rows={4} />
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Mots-clés</Label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {(editForm.motsCles ?? []).map((kw, i) => (

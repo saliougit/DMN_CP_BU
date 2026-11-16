@@ -415,7 +415,7 @@ export default function AdminDocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Documents du catalogue</h1>
         </div>
@@ -603,7 +603,7 @@ export default function AdminDocumentsPage() {
             ) : (
               /* Étape 2 : Classification */
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold">{files.length} fichier(s) à classer</p>
                   <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
                     onClick={() => document.getElementById("sheet-pdf-upload")?.click()}>
@@ -736,8 +736,8 @@ export default function AdminDocumentsPage() {
                         <p className="text-xs text-red-600 dark:text-red-400">{entry.error}</p>
                       )}
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="col-span-2 space-y-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="sm:col-span-2 space-y-1">
                           <Label className="text-[10px]">Titre</Label>
                           <Input value={entry.titre} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "titre", e.target.value)}
@@ -795,13 +795,13 @@ export default function AdminDocumentsPage() {
                             onChange={(e) => updateFile(entry.id, "annee", Number(e.target.value))}
                             className="h-8 text-xs" />
                         </div>
-                        <div className="col-span-2 space-y-1">
+                        <div className="sm:col-span-2 space-y-1">
                           <Label className="text-[10px]">Directeur (optionnel)</Label>
                           <Input value={entry.directeur} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "directeur", e.target.value)}
                             className="h-8 text-xs" placeholder="Prof. Nom Prénom" />
                         </div>
-                        <div className="col-span-2 space-y-1">
+                        <div className="sm:col-span-2 space-y-1">
                           <Label className="text-[10px]">Résumé (optionnel)</Label>
                           <Textarea value={entry.resume} disabled={locked}
                             onChange={(e) => updateFile(entry.id, "resume", e.target.value)}

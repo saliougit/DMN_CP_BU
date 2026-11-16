@@ -12,7 +12,15 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 
 - [ ] Remplacer les éléments bruts/mal stylés par des composants propres et cohérents (Base UI déjà en place dans le projet, ou shadcn) — à traiter progressivement, écran par écran.
 - [ ] Exemple cité : le panneau qui s'ouvre au clic sur "Profil" (infos un peu collées, pas assez d'air/de structure).
-- [ ] **Responsive sur la partie admin (`/gestion/...`)** : à corriger — l'interface admin n'est pas pensée mobile/tablette aujourd'hui (tableaux, sheets, actions).
+- [x] **Responsive sur la partie admin (`/gestion/...`)** — ✅ fait (2026-11-16) : voir détail ci-dessous.
+
+**Responsive admin — détail de ce qui a été corrigé** :
+- `submission-detail-drawer.tsx` : panneau d'infos en `w-[400px]` fixe + viewer PDF côte à côte — ne rentrait sur aucun écran de téléphone (bug le plus sérieux trouvé, le drawer d'approbation était quasi inutilisable sur mobile). Passé en colonne empilée sous `lg`, côte à côte seulement à partir de `lg`.
+- `gestion/documents/[id]/page.tsx` : panneau métadonnées + viewer PDF forcés à une hauteur égale (`calc(100vh-12rem)`) et `sticky` même en layout empilé mobile → doublait la hauteur de page inutilement. Hauteurs/sticky maintenant réservés à `lg+`.
+- `gestion/membres/page.tsx` : rangée de 3 cartes stats en `flex` sans wrap (se tassaient sur mobile) → passée en `grid grid-cols-1 sm:grid-cols-3`.
+- En-têtes de page (`membres`, `documents`) avec titre + boutons sans `flex-wrap` → ajouté, pour éviter le débordement sur petit écran.
+- Grilles de formulaire `grid-cols-2` denses (édition document, upload en lot) → `grid-cols-1 sm:grid-cols-2` pour respirer sur mobile.
+- Déjà bon sans y toucher : sidebar admin (shadcn, tiroir off-canvas natif sur mobile), tableaux (`Table` a déjà un wrapper `overflow-x-auto` intégré + colonnes masquées progressivement), dashboard, page classification.
 
 ## 3. Gestion des rôles (membre ↔ admin) — ✅ fait (2026-11-16)
 

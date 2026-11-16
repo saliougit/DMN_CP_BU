@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, Fragment } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   CheckCircle2, XCircle, Eye, Clock, FileText, RefreshCw,
   Calendar, AlertTriangle, Search, X, ChevronDown, ChevronUp,
@@ -8,9 +8,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from "@/components/ui/table"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog"
@@ -176,89 +173,70 @@ export default function SoumissionsPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead>Titre</TableHead>
-                <TableHead className="hidden sm:table-cell">Auteur</TableHead>
-                <TableHead className="hidden md:table-cell">Faculté</TableHead>
-                <TableHead className="hidden lg:table-cell">Type</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="hidden md:table-cell">Soumis le</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((doc) => {
-                const s = STATUS_STYLE[doc.statut] ?? STATUS_STYLE.en_attente
-                const StatusIcon = s.icon
-                const expanded = expandedId === doc.id
-                return (
-                  <Fragment key={doc.id}>
-                    <TableRow className="hover:bg-muted/20">
-                      <TableCell className="max-w-[260px]">
-                        <p className="text-sm font-medium line-clamp-1">{doc.titre}</p>
-                        <p className="text-xs text-muted-foreground sm:hidden">{doc.auteur}</p>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{doc.auteur}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{doc.faculte}</TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <Badge className={`text-[10px] ${TYPE_COLORS[doc.type] ?? ""}`}>{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`gap-1 text-[10px] ${s.badgeCls}`}>
-                          <StatusIcon className="h-3 w-3" /> {s.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(doc.soumisLe)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          onClick={() => setExpandedId(expanded ? null : doc.id)}
-                          size="sm" variant="secondary"
-                          className="gap-1 text-xs h-8 shadow-none border-0"
-                          aria-expanded={expanded}
-                          aria-label={expanded ? `Replier ${doc.titre}` : `Déplier ${doc.titre}`}
-                        >
-                          {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
-                          Actions
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expanded && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="p-0 bg-muted/10">
-                          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                            <Button variant="outline" size="sm" onClick={() => setDetailDoc(doc)} className="gap-1.5 h-8 text-xs">
-                              <Eye className="h-3.5 w-3.5" /> Détails
-                            </Button>
-                            {peutAgir(doc) && peutValiderType(user, doc.type) && (
-                              <>
-                                <Button variant="outline" size="sm" onClick={() => setRejeteDoc(doc)}
-                                  className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60">
-                                  <XCircle className="h-3.5 w-3.5" /> Rejeter
-                                </Button>
-                                <Button size="sm" onClick={() => handleApprouver(doc)} className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90">
-                                  <CheckCircle2 className="h-3.5 w-3.5" /> Approuver
-                                </Button>
-                              </>
-                            )}
-                            {doc.statut === "rejete" && doc.motifRejet && (
-                              <span className="text-xs text-destructive/80 ml-1">
-                                <span className="font-semibold">Motif :</span> {doc.motifRejet}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+        <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+          {paginated.map((doc) => {
+            const s = STATUS_STYLE[doc.statut] ?? STATUS_STYLE.en_attente
+            const StatusIcon = s.icon
+            const expanded = expandedId === doc.id
+            return (
+              <div key={doc.id} className="hover:bg-muted/20 transition-colors">
+                <div className="flex items-start gap-3 p-3 sm:p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium line-clamp-1">{doc.titre}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {doc.auteur} · {doc.faculte}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <Badge className={`text-[10px] ${TYPE_COLORS[doc.type] ?? ""}`}>{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
+                      <span className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Calendar className="h-3 w-3" /> {formatDate(doc.soumisLe)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <Badge variant="outline" className={`gap-1 text-[10px] ${s.badgeCls}`}>
+                      <StatusIcon className="h-3 w-3" /> {s.label}
+                    </Badge>
+                    <Button
+                      onClick={() => setExpandedId(expanded ? null : doc.id)}
+                      size="sm" variant="secondary"
+                      className="gap-1 text-xs h-8 shadow-none border-0"
+                      aria-expanded={expanded}
+                      aria-label={expanded ? `Replier ${doc.titre}` : `Déplier ${doc.titre}`}
+                    >
+                      {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
+                      Actions
+                    </Button>
+                  </div>
+                </div>
+                {expanded && (
+                  <div className="bg-muted/10 border-t border-border/60">
+                    <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-3">
+                      <Button variant="outline" size="sm" onClick={() => setDetailDoc(doc)} className="gap-1.5 h-8 text-xs">
+                        <Eye className="h-3.5 w-3.5" /> Détails
+                      </Button>
+                      {peutAgir(doc) && peutValiderType(user, doc.type) && (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => setRejeteDoc(doc)}
+                            className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60">
+                            <XCircle className="h-3.5 w-3.5" /> Rejeter
+                          </Button>
+                          <Button size="sm" onClick={() => handleApprouver(doc)} className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Approuver
+                          </Button>
+                        </>
+                      )}
+                      {doc.statut === "rejete" && doc.motifRejet && (
+                        <span className="text-xs text-destructive/80 ml-1">
+                          <span className="font-semibold">Motif :</span> {doc.motifRejet}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

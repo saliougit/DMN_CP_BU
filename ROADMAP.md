@@ -22,7 +22,9 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 - `gestion/membres/page.tsx` : rangée de 3 cartes stats en `flex` sans wrap (se tassaient sur mobile) → passée en `grid grid-cols-1 sm:grid-cols-3`.
 - En-têtes de page (`membres`, `documents`) avec titre + boutons sans `flex-wrap` → ajouté, pour éviter le débordement sur petit écran.
 - Grilles de formulaire `grid-cols-2` denses (édition document, upload en lot) → `grid-cols-1 sm:grid-cols-2` pour respirer sur mobile.
-- Déjà bon sans y toucher : sidebar admin (shadcn, tiroir off-canvas natif sur mobile), tableaux (`Table` a déjà un wrapper `overflow-x-auto` intégré + colonnes masquées progressivement), dashboard, page classification.
+- Déjà bon sans y toucher : sidebar admin (shadcn, tiroir off-canvas natif sur mobile), dashboard, page classification.
+
+**Round 2 (toujours 2026-11-16, retour "pas du tout responsive" après le round 1)** : le vrai problème restant — les listes `soumissions`, `documents` et `membres` utilisaient un vrai `<table>`/le composant `Table`, qui masque des colonnes en dessous de certains breakpoints mais ne garantit pas que le reste (titre + statut + bouton Actions) rentre sur un petit mobile ; `documents/page.tsx` utilisait même un `<table>` HTML brut sans le wrapper `overflow-x-auto` du composant partagé, donc du contenu pouvait être purement coupé (pas scrollable) sur mobile. **Remplacé les 3 tableaux par des listes de cartes empilées (div + flex, mêmes infos, mêmes actions)** — plus aucun risque de débordement horizontal, quelle que soit la largeur d'écran. Retiré aussi le gros sous-titre non essentiel dans l'en-tête admin ("Administration — DMN-BN · Daara Madjmahoun Noreyni · UCAD · Dakar", jamais caché sur mobile) et réduit le padding de page (`p-6` → `p-3 sm:p-6`).
 
 ## 3. Gestion des rôles (membre ↔ admin) — ✅ fait (2026-11-16)
 
@@ -39,7 +41,9 @@ Backlog noté le 2026-11-16, à partir des retours utilisateur. Chaque item est 
 - [x] Ajouter un paramètre (visible et modifiable depuis le Django admin) qui contrôle l'affichage des boutons "Publier"/"Approuver" sur un document déjà rejeté.
 - [x] **Par défaut : caché** (les boutons ne s'affichent pas sur un document rejeté, sauf si l'admin active explicitement le paramètre).
 
-**Implémentation** : modèle singleton `Configuration` (`backend/apps/documents/models.py`, migration `0006_configuration`) avec le champ `afficher_boutons_documents_rejetes` (défaut `False`), modifiable uniquement depuis `/admin/documents/configuration/` (une seule ligne, non supprimable). Exposé en lecture aux admins via `GET /api/configuration/` (`ConfigurationView`). Frontend : `gestion/soumissions/page.tsx` charge ce réglage au montage et l'applique à la fois dans le tableau et dans `submission-detail-drawer.tsx` (prop `afficherBoutonsRejetes`) — les boutons Approuver/Rejeter restent par défaut invisibles sur un document rejeté, et apparaissent seulement si le super admin active le paramètre.
+**Implémentation** : modèle singleton `Configuration` (`backend/apps/documents/models.py`, migration `0006_configuration`) avec le champ `afficher_boutons_documents_rejetes` (défaut `False`), modifiable uniquement depuis `/admin/documents/configuration/` (une seule ligne, non supprimable). Exposé en lecture aux admins via `GET /api/configuration/` (`ConfigurationView`). Frontend : `gestion/soumissions/page.tsx` charge ce réglage au montage et l'applique à la fois dans la liste et dans `submission-detail-drawer.tsx` (prop `afficherBoutonsRejetes`) — les boutons Approuver/Rejeter restent par défaut invisibles sur un document rejeté, et apparaissent seulement si le super admin active le paramètre.
+
+**Habilitations de validation — UI en chips** (retour 2026-11-16) : les cases à cocher remplacées par des boutons "chip" (pilule, actif = fond primaire) en `flex flex-wrap`, dans la sheet de détail membre et celle de création — plus visuel, montre d'un coup d'œil toutes les habilitations cochées.
 
 ## 5. Sous-rôles admin par type de document (validation ciblée) — ✅ fait (2026-11-16)
 

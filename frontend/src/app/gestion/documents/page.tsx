@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect, Fragment } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Search, FileText, Download, Trash2, Eye, RefreshCw,
@@ -461,87 +461,57 @@ export default function AdminDocumentsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 border-b border-border">
-            <tr>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Titre</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Auteur</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Faculté</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Type</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Année</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">
-                <span className="flex items-center justify-end gap-1"><Download className="h-3 w-3" /> DL</span>
-              </th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">
-                <span className="flex items-center justify-end gap-1"><Eye className="h-3 w-3" /> Vues</span>
-              </th>
-              <th className="px-4 py-3 w-28" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {paginated.map((doc) => {
-              const expanded = expandedId === doc.id
-              return (
-                <Fragment key={doc.id}>
-                  <tr className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium line-clamp-1">{doc.titre}</p>
-                      <p className="text-xs text-muted-foreground md:hidden">{doc.auteur}</p>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{doc.auteur}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{doc.faculte}</td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <Badge className={`text-[10px] ${TYPE_COLORS[doc.type] ?? ""}`}>{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{doc.annee}</td>
-                    <td className="px-4 py-3 text-right hidden lg:table-cell">
-                      <span className={`text-xs font-medium ${tri === "telecharges" ? "text-purple-600 font-semibold" : "text-muted-foreground"}`}>
-                        {(doc.nbTelechargements ?? 0).toLocaleString("fr-FR")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right hidden lg:table-cell">
-                      <span className={`text-xs font-medium ${tri === "vus" ? "text-blue-600 font-semibold" : "text-muted-foreground"}`}>
-                        {(doc.nbConsultations ?? 0).toLocaleString("fr-FR")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button
-                        onClick={() => setExpandedId(expanded ? null : doc.id)}
-                        size="sm" variant="secondary"
-                        className="gap-1 text-xs h-8 shadow-none border-0"
-                        aria-expanded={expanded}
-                        aria-label={expanded ? `Replier ${doc.titre}` : `Déplier ${doc.titre}`}
-                      >
-                        {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
-                        Actions
-                      </Button>
-                    </td>
-                  </tr>
-                  {expanded && (
-                    <tr className="hover:bg-transparent">
-                      <td colSpan={7} className="p-0 bg-muted/10">
-                        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                            onClick={() => router.push(`/gestion/documents/${doc.id}`)}>
-                            <Eye className="h-3.5 w-3.5" /> Voir
-                          </Button>
-                          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-                            <Download className="h-3.5 w-3.5" /> Télécharger
-                          </Button>
-                          <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60"
-                            onClick={() => handleSupprimer(doc.id)}>
-                            <Trash2 className="h-3.5 w-3.5" /> Supprimer
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              )
-            })}
-          </tbody>
-        </table>
+      <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+        {paginated.map((doc) => {
+          const expanded = expandedId === doc.id
+          return (
+            <div key={doc.id} className="hover:bg-muted/20 transition-colors">
+              <div className="flex items-start gap-3 p-3 sm:p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium line-clamp-1">{doc.titre}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{doc.auteur} · {doc.faculte}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <Badge className={`text-[10px] ${TYPE_COLORS[doc.type] ?? ""}`}>{TYPE_LABELS[doc.type] ?? doc.type}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{doc.annee}</span>
+                    <span className={`text-[10px] flex items-center gap-1 ${tri === "telecharges" ? "text-purple-600 font-semibold" : "text-muted-foreground"}`}>
+                      <Download className="h-3 w-3" /> {(doc.nbTelechargements ?? 0).toLocaleString("fr-FR")}
+                    </span>
+                    <span className={`text-[10px] flex items-center gap-1 ${tri === "vus" ? "text-blue-600 font-semibold" : "text-muted-foreground"}`}>
+                      <Eye className="h-3 w-3" /> {(doc.nbConsultations ?? 0).toLocaleString("fr-FR")}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setExpandedId(expanded ? null : doc.id)}
+                  size="sm" variant="secondary"
+                  className="gap-1 text-xs h-8 shadow-none border-0 flex-shrink-0"
+                  aria-expanded={expanded}
+                  aria-label={expanded ? `Replier ${doc.titre}` : `Déplier ${doc.titre}`}
+                >
+                  {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
+                  Actions
+                </Button>
+              </div>
+              {expanded && (
+                <div className="bg-muted/10 border-t border-border/60">
+                  <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-3">
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                      onClick={() => router.push(`/gestion/documents/${doc.id}`)}>
+                      <Eye className="h-3.5 w-3.5" /> Voir
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                      <Download className="h-3.5 w-3.5" /> Télécharger
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 hover:border-destructive/60"
+                      onClick={() => handleSupprimer(doc.id)}>
+                      <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
         {filtrees.length === 0 && (
           <div className="flex flex-col items-center py-16 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/20 mb-3" />

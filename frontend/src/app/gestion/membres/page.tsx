@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect, Fragment } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import {
   Search, Users, Mail, GraduationCap, BookOpen, Calendar,
   RefreshCw, Plus, Loader2, Shield, UserRound, Lock, Eye, EyeOff, Bell, BellOff,
@@ -10,9 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from "@/components/ui/table"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
@@ -258,99 +255,73 @@ export default function AdminMembresPage() {
           <p className="text-sm text-muted-foreground">Aucun membre trouvé</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead>Membre</TableHead>
-                <TableHead className="hidden sm:table-cell">Email</TableHead>
-                <TableHead className="hidden md:table-cell">Faculté</TableHead>
-                <TableHead className="hidden lg:table-cell">Niveau</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((user) => {
-                const expanded = expandedId === user.id
-                return (
-                  <Fragment key={user.id}>
-                    <TableRow className="hover:bg-muted/20">
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
-                            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-                              {getInitials(user.nom, user.prenom)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium leading-tight truncate">{user.prenom} {user.nom}</p>
-                            <p className="text-xs text-muted-foreground sm:hidden truncate">{user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{user.email}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{user.faculte ?? "—"}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{user.niveau ?? "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px] gap-1">
-                          {user.isSuperAdmin && <Crown className="h-3 w-3" />}
-                          {user.isSuperAdmin ? "Super admin" : user.role === "admin" ? "Admin" : "Membre"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(user.createdAt)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          onClick={() => setExpandedId(expanded ? null : user.id)}
-                          size="sm" variant="secondary"
-                          className="gap-1 text-xs h-8 shadow-none border-0"
-                          aria-expanded={expanded}
-                          aria-label={expanded ? `Replier ${user.prenom} ${user.nom}` : `Déplier ${user.prenom} ${user.nom}`}
-                        >
-                          {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
-                          Actions
+        <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
+          {paginated.map((user) => {
+            const expanded = expandedId === user.id
+            return (
+              <div key={user.id} className="hover:bg-muted/20 transition-colors">
+                <div className="flex items-start gap-3 p-3 sm:p-4">
+                  <Avatar className="h-9 w-9 flex-shrink-0 mt-0.5">
+                    {user.photoUrl && <AvatarImage src={user.photoUrl} alt="" />}
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                      {getInitials(user.nom, user.prenom)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium leading-tight truncate">{user.prenom} {user.nom}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-[10px] gap-1">
+                        {user.isSuperAdmin && <Crown className="h-3 w-3" />}
+                        {user.isSuperAdmin ? "Super admin" : user.role === "admin" ? "Admin" : "Membre"}
+                      </Badge>
+                      <span className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Calendar className="h-3 w-3" /> {formatDate(user.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setExpandedId(expanded ? null : user.id)}
+                    size="sm" variant="secondary"
+                    className="gap-1 text-xs h-8 shadow-none border-0 flex-shrink-0"
+                    aria-expanded={expanded}
+                    aria-label={expanded ? `Replier ${user.prenom} ${user.nom}` : `Déplier ${user.prenom} ${user.nom}`}
+                  >
+                    {expanded ? <ChevronUp className="h-3.5 w-3.5 opacity-60" /> : <ChevronDown className="h-3.5 w-3.5 opacity-60" />}
+                    Actions
+                  </Button>
+                </div>
+                {expanded && (
+                  <div className="bg-muted/10 border-t border-border/60">
+                    <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-3">
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                        onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
+                        <Info className="h-3.5 w-3.5" /> Détails
+                      </Button>
+                      {(user.role !== "admin" || currentUser?.isSuperAdmin) && (
+                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                          onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(true); setShowSetPwdValue(false) }}>
+                          <Lock className="h-3.5 w-3.5" /> Changer le mot de passe
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                    {expanded && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="p-0 bg-muted/10">
-                          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                              onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(false); setShowSetPwdValue(false) }}>
-                              <Info className="h-3.5 w-3.5" /> Détails
-                            </Button>
-                            {(user.role !== "admin" || currentUser?.isSuperAdmin) && (
-                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                                onClick={() => { setDetailUser(user); setPermsForm(user.typesValides); setSetPwdForm({ password: "", notify: true }); setShowSetPwdPanel(true); setShowSetPwdValue(false) }}>
-                                <Lock className="h-3.5 w-3.5" /> Changer le mot de passe
-                              </Button>
-                            )}
-                            {user.role === "membre" && (
-                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                                onClick={() => handleChangeRole(user, "admin")} disabled={changingRole}>
-                                <ArrowUpCircle className="h-3.5 w-3.5" /> Promouvoir admin
-                              </Button>
-                            )}
-                            {user.role === "admin" && !user.isSuperAdmin && currentUser?.isSuperAdmin && (
-                              <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
-                                onClick={() => handleChangeRole(user, "membre")} disabled={changingRole}>
-                                <ArrowDownCircle className="h-3.5 w-3.5" /> Rétrograder membre
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      )}
+                      {user.role === "membre" && (
+                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                          onClick={() => handleChangeRole(user, "admin")} disabled={changingRole}>
+                          <ArrowUpCircle className="h-3.5 w-3.5" /> Promouvoir admin
+                        </Button>
+                      )}
+                      {user.role === "admin" && !user.isSuperAdmin && currentUser?.isSuperAdmin && (
+                        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs"
+                          onClick={() => handleChangeRole(user, "membre")} disabled={changingRole}>
+                          <ArrowDownCircle className="h-3.5 w-3.5" /> Rétrograder membre
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
       <div className="flex items-center justify-between">
@@ -522,15 +493,20 @@ export default function AdminMembresPage() {
                       <p className="text-[10px] text-muted-foreground">
                         Types de documents que cet admin peut approuver/rejeter. Sans habilitation, il consulte les soumissions mais ne peut pas les valider.
                       </p>
-                      <div className="space-y-2">
-                        {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                          <label key={value} className="flex items-center gap-2.5 text-sm cursor-pointer">
-                            <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary"
-                              checked={permsForm.includes(value as DocumentType)}
-                              onChange={() => toggleType(value as DocumentType)} />
-                            {label}
-                          </label>
-                        ))}
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(TYPE_LABELS).map(([value, label]) => {
+                          const selected = permsForm.includes(value as DocumentType)
+                          return (
+                            <button key={value} type="button" onClick={() => toggleType(value as DocumentType)}
+                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                selected
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                              }`}>
+                              {label}
+                            </button>
+                          )
+                        })}
                       </div>
                       <Button size="sm" className="text-xs h-8 gap-1.5 bg-primary hover:bg-primary/90 w-full"
                         onClick={handleSavePermissions} disabled={savingPerms}>
@@ -638,20 +614,26 @@ export default function AdminMembresPage() {
                 <div className="space-y-2 rounded-lg border border-border/60 p-3 bg-muted/20">
                   <Label className="text-xs">Habilitations de validation (facultatif)</Label>
                   <p className="text-[10px] text-muted-foreground">Types de documents qu'il pourra approuver/rejeter — vide = consultation uniquement.</p>
-                  <div className="space-y-1.5 pt-1">
-                    {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                      <label key={value} className="flex items-center gap-2.5 text-sm cursor-pointer">
-                        <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary"
-                          checked={createForm.typesValides.includes(value as DocumentType)}
-                          onChange={() => setCreateForm((f) => ({
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {Object.entries(TYPE_LABELS).map(([value, label]) => {
+                      const selected = createForm.typesValides.includes(value as DocumentType)
+                      return (
+                        <button key={value} type="button"
+                          onClick={() => setCreateForm((f) => ({
                             ...f,
-                            typesValides: f.typesValides.includes(value as DocumentType)
+                            typesValides: selected
                               ? f.typesValides.filter((t) => t !== value)
                               : [...f.typesValides, value as DocumentType],
-                          }))} />
-                        {label}
-                      </label>
-                    ))}
+                          }))}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                            selected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                          }`}>
+                          {label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}

@@ -420,13 +420,13 @@ export default function AdminDocumentsPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Documents du catalogue</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <Button variant="ghost" size="sm" className="flex-1 gap-1.5 text-xs h-8 sm:flex-none"
             onClick={() => { setRefreshing(true); loadDocs(); setTimeout(() => setRefreshing(false), 800) }}
             disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Actualiser
           </Button>
-          <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90" onClick={openSheet}>
+          <Button size="sm" className="flex-1 gap-2 bg-primary hover:bg-primary/90 sm:flex-none" onClick={openSheet}>
             <FileText className="h-4 w-4" /> Ajouter un document
           </Button>
         </div>

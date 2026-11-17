@@ -211,12 +211,12 @@ export default function AdminMembresPage() {
         <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Membres</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90"
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <Button size="sm" className="flex-1 gap-1.5 text-xs h-8 bg-primary hover:bg-primary/90 sm:flex-none"
             onClick={() => setCreateOpen(true)}>
             <Plus className="h-3.5 w-3.5" /> Créer un utilisateur
           </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8"
+          <Button variant="ghost" size="sm" className="flex-1 gap-1.5 text-xs h-8 sm:flex-none"
             onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
             Actualiser
